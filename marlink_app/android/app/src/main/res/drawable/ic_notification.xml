@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outer Location Pin with Hollow Center -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 12,1.5 C 7.86,1.5 4.5,4.86 4.5,9 c 0,5.6 7.5,13.5 7.5,13.5 s 7.5,-7.9 7.5,-13.5 C 19.5,4.86 16.14,1.5 12,1.5 Z M 12,14.8 c -3.2,0 -5.8,-2.6 -5.8,-5.8 s 2.6,-5.8 5.8,-5.8 s 5.8,2.6 5.8,5.8 s -2.6,5.8 -5.8,5.8 Z" />
+    <!-- Connecting Network Links -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="0.85"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 12,5.5 L 9.8,10.2 L 14.2,10.2 Z" />
+    <!-- Top Node -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 12,4.4 a 1.1,1.1 0 1,0 0,2.2 a 1.1,1.1 0 1,0 0,-2.2" />
+    <!-- Bottom Left Node -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 9.8,9.1 a 1.1,1.1 0 1,0 0,2.2 a 1.1,1.1 0 1,0 0,-2.2" />
+    <!-- Bottom Right Node -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 14.2,9.1 a 1.1,1.1 0 1,0 0,2.2 a 1.1,1.1 0 1,0 0,-2.2" />
+</vector>

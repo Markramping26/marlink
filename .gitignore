@@ -1,0 +1,23 @@
+# Flutter / Dart
+**/build/
+**/.dart_tool/
+**/.pub-cache/
+**/.pub/
+*.apk
+
+# PHP / Composer
+marlink_api/composer.phar
+marlink_api/vendor/
+marlink_api/.env
+
+# Temporary setup downloads
+cmdline-tools.zip
+mingit.zip
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+Thumbs.db
