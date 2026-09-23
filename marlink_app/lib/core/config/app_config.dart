@@ -4,11 +4,7 @@ class AppConfig {
   AppConfig._();
 
   /// Set this to your live production domain or cloud URL when hosting online:
-  /// Examples:
-  ///   - 'https://marlink-api.up.railway.app'
-  ///   - 'https://api.yourdomain.com'
-  /// Leave as null to use local development IP/port.
-  static const String? productionServerUrl = null;
+  static const String productionServerUrl = 'https://marlink-api.onrender.com';
 
   // Current machine Wi-Fi IP on local network (for local development)
   static const String defaultServerHostIp = '192.168.4.43';
@@ -18,8 +14,8 @@ class AppConfig {
   static int serverPort = defaultServerPort;
 
   static String _buildBaseUrl(String host, int port) {
-    if (productionServerUrl != null && productionServerUrl!.trim().isNotEmpty) {
-      final clean = productionServerUrl!.trim().replaceAll(RegExp(r'/+$'), '');
+    if (productionServerUrl.trim().isNotEmpty) {
+      final clean = productionServerUrl.trim().replaceAll(RegExp(r'/+$'), '');
       return clean.endsWith('/api/v1') ? clean : '$clean/api/v1';
     }
     if (host.startsWith('http://') || host.startsWith('https://')) {
@@ -40,16 +36,16 @@ class AppConfig {
   static String apiBaseUrl = defaultBaseUrl;
 
   static String get serverAddress {
-    if (productionServerUrl != null && productionServerUrl!.trim().isNotEmpty) {
-      final uri = Uri.tryParse(productionServerUrl!.trim());
+    if (productionServerUrl.trim().isNotEmpty) {
+      final uri = Uri.tryParse(productionServerUrl.trim());
       if (uri != null && uri.host.isNotEmpty) return uri.host;
     }
     return '$serverHostIp:$serverPort';
   }
 
   static String get serverOrigin {
-    if (productionServerUrl != null && productionServerUrl!.trim().isNotEmpty) {
-      final clean = productionServerUrl!.trim().replaceAll(RegExp(r'/+$'), '');
+    if (productionServerUrl.trim().isNotEmpty) {
+      final clean = productionServerUrl.trim().replaceAll(RegExp(r'/+$'), '');
       final idx = clean.indexOf('/api/v1');
       return idx != -1 ? clean.substring(0, idx) : clean;
     }
