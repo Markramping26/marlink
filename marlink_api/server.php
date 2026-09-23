@@ -56,23 +56,234 @@ function getEnvValue(string $key, ?string $default = null): ?string {
     return $envFileVars[$key] ?? $default;
 }
 
-// Database Connection
+// Database Initialization for SQLite fallback
+function initSqliteSchema(PDO $pdo): void {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE,
+            phone TEXT DEFAULT '',
+            password TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS user_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            avatar_url TEXT,
+            bio TEXT,
+            battery_pct INTEGER DEFAULT 100,
+            sharing_status TEXT DEFAULT 'on',
+            sharing_expires_at DATETIME,
+            show_speed INTEGER DEFAULT 1,
+            show_battery INTEGER DEFAULT 1,
+            allow_geofence_alerts INTEGER DEFAULT 1,
+            last_seen_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS personal_access_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tokenable_type TEXT NOT NULL,
+            tokenable_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            token TEXT NOT NULL,
+            abilities TEXT,
+            last_used_at DATETIME,
+            expires_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            description TEXT,
+            created_by INTEGER NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS room_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            role TEXT DEFAULT 'member',
+            is_location_enabled INTEGER DEFAULT 1,
+            custom_nickname TEXT,
+            joined_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME,
+            UNIQUE(room_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS location_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            speed REAL DEFAULT 0,
+            heading REAL DEFAULT 0,
+            recorded_at DATETIME,
+            created_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            message_type TEXT DEFAULT 'text',
+            content TEXT,
+            latitude REAL,
+            longitude REAL,
+            location_label TEXT,
+            is_deleted INTEGER DEFAULT 0,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS message_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id INTEGER NOT NULL,
+            file_path TEXT NOT NULL,
+            file_url TEXT NOT NULL,
+            file_name TEXT,
+            file_size INTEGER DEFAULT 0,
+            mime_type TEXT,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            alert_type TEXT NOT NULL,
+            status TEXT DEFAULT 'active',
+            latitude REAL,
+            longitude REAL,
+            metadata TEXT,
+            acknowledged_by INTEGER,
+            acknowledged_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS places (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id INTEGER NOT NULL,
+            created_by INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            address TEXT,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            radius_meters REAL DEFAULT 200,
+            alert_on_entry INTEGER DEFAULT 1,
+            alert_on_exit INTEGER DEFAULT 1,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS calls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id INTEGER NOT NULL,
+            initiator_id INTEGER NOT NULL,
+            call_type TEXT DEFAULT 'voice',
+            status TEXT DEFAULT 'calling',
+            started_at DATETIME,
+            ended_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
+        CREATE TABLE IF NOT EXISTS call_participants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            call_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'ringing',
+            joined_at DATETIME,
+            left_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME,
+            UNIQUE(call_id, user_id)
+        );
+    ");
+
+    $check = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+    if ((int)$check === 0) {
+        $pwd = password_hash('password123', PASSWORD_DEFAULT);
+        $pdo->exec("
+            INSERT INTO users (id, name, username, email, phone, password, is_active, created_at, updated_at)
+            VALUES (1, 'Admin User', 'admin', 'admin@marlink.local', '09123456789', '{$pwd}', 1, datetime('now'), datetime('now'));
+            INSERT INTO user_profiles (user_id, battery_pct, sharing_status, show_speed, show_battery, allow_geofence_alerts, created_at, updated_at)
+            VALUES (1, 100, 'on', 1, 1, 1, datetime('now'), datetime('now'));
+        ");
+    }
+}
+
+// Database Connection with Auto Fallback (Cloud SQLite or MySQL)
 function getDb(): PDO {
     static $pdo = null;
-    if ($pdo === null) {
-        $host = getEnvValue('DB_HOST', '127.0.0.1');
-        $port = getEnvValue('DB_PORT', '3306');
-        $db   = getEnvValue('DB_DATABASE', 'marlink_db');
-        $user = getEnvValue('DB_USERNAME', 'root');
-        $pass = getEnvValue('DB_PASSWORD', '');
+    if ($pdo !== null) {
+        return $pdo;
+    }
 
-        $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
-        $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-        ];
-        $pdo = new PDO($dsn, $user, $pass, $options);
+    $connection = getEnvValue('DB_CONNECTION', 'auto');
+    $host = getEnvValue('DB_HOST', '127.0.0.1');
+
+    // 1. If explicit Cloud MySQL is configured
+    if ($connection === 'mysql' || ($connection === 'auto' && $host !== '127.0.0.1' && $host !== 'localhost' && $host !== 'sqlite')) {
+        try {
+            $port = getEnvValue('DB_PORT', '3306');
+            $db   = getEnvValue('DB_DATABASE', 'marlink_db');
+            $user = getEnvValue('DB_USERNAME', 'root');
+            $pass = getEnvValue('DB_PASSWORD', '');
+
+            $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+            $options = [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::ATTR_TIMEOUT            => 4,
+            ];
+            $pdo = new PDO($dsn, $user, $pass, $options);
+            return $pdo;
+        } catch (Throwable $e) {
+            if ($connection === 'mysql') {
+                throw $e;
+            }
+        }
+    }
+
+    // 2. Local MySQL attempt (e.g. XAMPP running locally)
+    if ($host === '127.0.0.1' || $host === 'localhost') {
+        try {
+            $port = getEnvValue('DB_PORT', '3306');
+            $db   = getEnvValue('DB_DATABASE', 'marlink_db');
+            $user = getEnvValue('DB_USERNAME', 'root');
+            $pass = getEnvValue('DB_PASSWORD', '');
+            $dsn = "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
+            $pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_TIMEOUT            => 2,
+            ]);
+            return $pdo;
+        } catch (Throwable $e) {
+            // Local MySQL not running, seamlessly proceed to SQLite fallback
+        }
+    }
+
+    // 3. Resilient Standalone & Cloud SQLite Database
+    $dbDir = __DIR__ . '/database';
+    if (!is_dir($dbDir)) {
+        @mkdir($dbDir, 0777, true);
+    }
+    $dbPath = $dbDir . '/marlink.sqlite';
+    $isNew = !file_exists($dbPath);
+    $pdo = new PDO("sqlite:{$dbPath}");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $pdo->sqliteCreateFunction('now', fn() => date('Y-m-d H:i:s'));
+    $pdo->sqliteCreateFunction('curdate', fn() => date('Y-m-d'));
+    if ($isNew || filesize($dbPath) === 0) {
+        initSqliteSchema($pdo);
     }
     return $pdo;
 }
@@ -355,8 +566,9 @@ if (($method === 'POST' || $method === 'PUT') && ($uri === '/api/v1/user/profile
         }
     }
     if (isset($body['sharing_duration_minutes']) && (int)$body['sharing_duration_minutes'] > 0) {
-        $fields[] = 'sharing_expires_at = DATE_ADD(NOW(), INTERVAL ? MINUTE)';
-        $params[] = (int)$body['sharing_duration_minutes'];
+        $minutes = (int)$body['sharing_duration_minutes'];
+        $fields[] = 'sharing_expires_at = ?';
+        $params[] = date('Y-m-d H:i:s', time() + ($minutes * 60));
     }
     if (isset($body['battery_pct'])) {
         $fields[] = 'battery_pct = ?';
@@ -1298,12 +1510,16 @@ if ($method === 'POST' && preg_match('#^/api/v1/calls/(\d+)/join$#', $uri, $m)) 
     }
 
     // Upsert participant status to joined
-    $stmt = $db->prepare("
-        INSERT INTO call_participants (call_id, user_id, status, joined_at, created_at, updated_at)
-        VALUES (?, ?, 'joined', NOW(), NOW(), NOW())
-        ON DUPLICATE KEY UPDATE status = 'joined', joined_at = NOW(), updated_at = NOW()
-    ");
-    $stmt->execute([$callId, $currentUser['id']]);
+    $chk = $db->prepare("SELECT id FROM call_participants WHERE call_id = ? AND user_id = ? LIMIT 1");
+    $chk->execute([$callId, $currentUser['id']]);
+    $existingPart = $chk->fetch();
+    if ($existingPart) {
+        $db->prepare("UPDATE call_participants SET status = 'joined', joined_at = NOW(), updated_at = NOW() WHERE id = ?")
+            ->execute([$existingPart['id']]);
+    } else {
+        $db->prepare("INSERT INTO call_participants (call_id, user_id, status, joined_at, created_at, updated_at) VALUES (?, ?, 'joined', NOW(), NOW(), NOW())")
+            ->execute([$callId, $currentUser['id']]);
+    }
 
     // If call was calling/ringing, transition to active
     $stmt = $db->prepare("UPDATE calls SET status = 'active', updated_at = NOW() WHERE id = ? AND status IN ('calling', 'ringing')");
@@ -1321,12 +1537,16 @@ if ($method === 'POST' && preg_match('#^/api/v1/calls/(\d+)/decline$#', $uri, $m
     $currentUser = authenticateUser($db);
     $callId = (int)$m[1];
 
-    $stmt = $db->prepare("
-        INSERT INTO call_participants (call_id, user_id, status, created_at, updated_at)
-        VALUES (?, ?, 'declined', NOW(), NOW())
-        ON DUPLICATE KEY UPDATE status = 'declined', updated_at = NOW()
-    ");
-    $stmt->execute([$callId, $currentUser['id']]);
+    $chk = $db->prepare("SELECT id FROM call_participants WHERE call_id = ? AND user_id = ? LIMIT 1");
+    $chk->execute([$callId, $currentUser['id']]);
+    $existingPart = $chk->fetch();
+    if ($existingPart) {
+        $db->prepare("UPDATE call_participants SET status = 'declined', updated_at = NOW() WHERE id = ?")
+            ->execute([$existingPart['id']]);
+    } else {
+        $db->prepare("INSERT INTO call_participants (call_id, user_id, status, created_at, updated_at) VALUES (?, ?, 'declined', NOW(), NOW())")
+            ->execute([$callId, $currentUser['id']]);
+    }
 
     // Check if this was a 1-on-1 call that got declined
     $stmt = $db->prepare("SELECT * FROM calls WHERE id = ? LIMIT 1");
