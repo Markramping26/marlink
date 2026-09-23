@@ -89,43 +89,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: InkWell(
-              onTap: () => ServerConfigDialog.show(context, onConfigSaved: () => setState(() {})),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: (isDark ? AppColors.darkSurface : AppColors.lightSurface).withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.dns_rounded, size: 12, color: AppColors.brandSky),
-                    const SizedBox(width: 5),
-                    Text(
-                      AppConfig.serverAddress,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.settings, size: 11, color: AppColors.brandSky),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: Container(
         width: double.infinity,

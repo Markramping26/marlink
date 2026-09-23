@@ -14,6 +14,12 @@ class ApiException implements Exception {
 
   String get friendlyErrorMessage {
     if (statusCode == 401) {
+      if (message.isNotEmpty &&
+          !message.toLowerCase().contains('unauthenticated') &&
+          !message.toLowerCase().contains('token expired') &&
+          !message.toLowerCase().contains('cannot reach server')) {
+        return message;
+      }
       return 'Session expired. Please log in again.';
     } else if (statusCode == 403) {
       return 'Access denied. You do not have permission for this action.';

@@ -114,51 +114,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
 
-              // Top-Right Server Connection Pill
-              Positioned(
-                top: 12,
-                right: 18,
-                child: InkWell(
-                  onTap: () => ServerConfigDialog.show(context, onConfigSaved: () => setState(() {})),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: (isDark ? AppColors.darkSurface : AppColors.lightSurface).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.dns_rounded, size: 12, color: AppColors.brandSky),
-                        const SizedBox(width: 5),
-                        Text(
-                          AppConfig.serverAddress,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.settings, size: 11, color: AppColors.brandSky),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
               // 2. Main Scrollable Content
               Center(
                 child: SingleChildScrollView(
