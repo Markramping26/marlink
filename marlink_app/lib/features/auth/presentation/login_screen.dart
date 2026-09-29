@@ -43,7 +43,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     } else if (mounted) {
       final error = ref.read(authNotifierProvider).errorMessage;
-      setState(() => _localError = error ?? 'Login failed. Please check credentials.');
+      setState(() => _localError = error ?? 'Login failed. Please check your credentials.');
     }
   }
 
@@ -62,12 +62,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             end: Alignment.bottomCenter,
             colors: isDark
                 ? [
+                    const Color(0xFF040A18),
+                    const Color(0xFF0A142E),
                     const Color(0xFF060D1E),
-                    const Color(0xFF0B1733),
-                    const Color(0xFF081024),
                   ]
                 : [
-                    const Color(0xFFF1F5F9),
+                    const Color(0xFFF8FAFC),
                     const Color(0xFFFFFFFF),
                     const Color(0xFFE2E8F0),
                   ],
@@ -76,10 +76,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // 1. Subtle Ambient Background Aura
+              // 1. Sleek Ambient Aura Glowing Orbs
               Positioned(
-                top: -80,
-                right: -60,
+                top: -90,
+                right: -70,
+                child: Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.20 : 0.12),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 60,
+                left: -80,
                 child: Container(
                   width: 260,
                   height: 260,
@@ -87,24 +104,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF0EA5E9).withValues(alpha: isDark ? 0.18 : 0.12),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 80,
-                left: -80,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFF38BDF8).withValues(alpha: isDark ? 0.12 : 0.08),
+                        const Color(0xFF38BDF8).withValues(alpha: isDark ? 0.14 : 0.08),
                         Colors.transparent,
                       ],
                     ),
@@ -112,114 +112,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
 
-
-
-              // 2. Main Scrollable Content
+              // 2. Main Centered Form Container
               Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   child: Form(
                     key: _formKey,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Hero Branding Badge
-                        Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF0369A1), Color(0xFF0EA5E9)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.35),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
+                        // App Brand Icon with Glow Shadow
+                        Container(
+                          width: 68,
+                          height: 68,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0EA5E9).withValues(alpha: 0.40),
+                                blurRadius: 22,
+                                offset: const Offset(0, 8),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.asset(
-                                  'assets/images/app_logo.png',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const Center(
-                                    child: Icon(
-                                      Icons.share_location_rounded,
-                                      color: Colors.white,
-                                      size: 26,
-                                    ),
-                                  ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/images/app_logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Center(
+                                child: Icon(
+                                  Icons.shield_outlined,
+                                  color: Colors.white,
+                                  size: 34,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'MarLink',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.4,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'GPS & SAFETY NETWORK',
-                                    style: TextStyle(
-                                      color: Color(0xFF38BDF8),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
 
-                        // Title & Subtitle
+                        // Brand Title
                         const Text(
-                          'Welcome back',
+                          'MarLink',
                           style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
                             letterSpacing: -0.8,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Sign in to access your private rooms, live member tracking, and real-time safety network.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.45,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        const SizedBox(height: 6),
+
+                        // Security Network Pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.25),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_rounded, size: 11, color: Color(0xFF38BDF8)),
+                              SizedBox(width: 5),
+                              Text(
+                                'REAL-TIME FAMILY GPS NETWORK',
+                                style: TextStyle(
+                                  color: Color(0xFF38BDF8),
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 28),
 
-                        // Error notification banner
+                        // Error Banner if login fails
                         if (_localError != null) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
                               color: AppColors.alertEmergency.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: AppColors.alertEmergency.withValues(alpha: 0.35),
                                 width: 1.2,
@@ -249,34 +235,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 20),
                         ],
 
-                        // Inputs Card Container
+                        // Elevated Form Card
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(22),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? const Color(0xFF0F1A34).withValues(alpha: 0.75)
-                                : Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
+                                ? const Color(0xFF0B1733).withValues(alpha: 0.85)
+                                : Colors.white.withValues(alpha: 0.95),
+                            borderRadius: BorderRadius.circular(24),
                             border: Border.all(
                               color: isDark ? const Color(0xFF1E2F54) : const Color(0xFFE2E8F0),
                               width: 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                                blurRadius: 18,
-                                offset: const Offset(0, 6),
+                                color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.07),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
                               ),
                             ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const Text(
+                                'Sign In to Your Account',
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Enter your credentials to connect with your group',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Username / Email input
                               MarLinkTextField(
                                 controller: _loginController,
                                 label: 'Email or Username',
-                                hint: 'e.g. mark or mark@marlink.local',
-                                prefixIcon: Icons.person_outline_rounded,
+                                hint: 'Enter your email or username',
+                                prefixIcon: Icons.alternate_email_rounded,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (val) {
                                   if (val == null || val.trim().isEmpty) {
@@ -285,12 +290,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 18),
+                              const SizedBox(height: 16),
 
+                              // Password input
                               MarLinkTextField(
                                 controller: _passwordController,
                                 label: 'Password',
-                                hint: '••••••••',
+                                hint: 'Enter your password',
                                 prefixIcon: Icons.lock_outline_rounded,
                                 isPassword: true,
                                 validator: (val) {
@@ -302,7 +308,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Remember Me Row
+                              // Remember Me Checkbox Row
                               Row(
                                 children: [
                                   SizedBox(
@@ -317,64 +323,80 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Remember me',
+                                    'Keep me logged in',
                                     style: TextStyle(
                                       fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                     ),
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 22),
+
+                              // Primary Action Button
+                              MarLinkButton(
+                                text: 'Sign In',
+                                icon: Icons.arrow_forward_rounded,
+                                onPressed: _handleLogin,
+                                isLoading: authState.isLoading,
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 24),
 
-                        // Hero Gradient Submit Button
-                        MarLinkButton(
-                          text: 'Sign In',
-                          icon: Icons.login_rounded,
-                          onPressed: _handleLogin,
-                          isLoading: authState.isLoading,
+                        // Switch to Register Screen Footer
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account?",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                );
+                              },
+                              child: const Text(
+                                'Create Account',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.brandSky,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
 
-
-
-                        // Footer: Register Link
-                        Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Don't have an account?",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                ),
+                        // Trust & Security Notice
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.verified_user_outlined,
+                              size: 13,
+                              color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              'End-to-End Encrypted GPS & Telemetry Protection',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                               ),
-                              const SizedBox(width: 6),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                                  );
-                                },
-                                child: const Text(
-                                  'Create Account',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.brandSky,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-
-
                       ],
                     ),
                   ),

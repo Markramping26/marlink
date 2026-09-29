@@ -5,14 +5,10 @@ import '../../domain/models/weather_model.dart';
 
 class WeatherForecastDialog extends StatefulWidget {
   final WeatherModel weather;
-  final bool isRadarActive;
-  final VoidCallback onToggleRadar;
 
   const WeatherForecastDialog({
     super.key,
     required this.weather,
-    required this.isRadarActive,
-    required this.onToggleRadar,
   });
 
   @override
@@ -347,59 +343,31 @@ class _WeatherForecastDialogState extends State<WeatherForecastDialog> {
               ),
               const SizedBox(height: 14),
 
-              // Zoom Earth Live Radar Layer Switch
-              InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: widget.onToggleRadar,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: widget.isRadarActive
-                        ? AppColors.brandSky.withValues(alpha: 0.15)
-                        : (isDark ? AppColors.darkSurfaceVariant : AppColors.lightSurfaceVariant),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: widget.isRadarActive
-                          ? AppColors.brandSky
-                          : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                      width: widget.isRadarActive ? 1.5 : 1,
-                    ),
+              // Environmental Telemetry Info Banner
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F1A34) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                    width: 1,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.radar_rounded,
-                        color: widget.isRadarActive ? AppColors.brandSky : (isDark ? Colors.white70 : AppColors.brandNavy),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Zoom Earth Live Rain Radar',
-                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-                            ),
-                            Text(
-                              widget.isRadarActive
-                                  ? 'Precipitation radar active (maxNativeZoom: 12)'
-                                  : 'Tap to overlay live storm & rain radar',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                              ),
-                            ),
-                          ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.wb_sunny_outlined, color: AppColors.brandSky, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Live meteorological data powered by Open-Meteo High-Resolution Forecasting.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                         ),
                       ),
-                      Switch.adaptive(
-                        value: widget.isRadarActive,
-                        onChanged: (_) => widget.onToggleRadar(),
-                        activeTrackColor: AppColors.brandSky,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 6),

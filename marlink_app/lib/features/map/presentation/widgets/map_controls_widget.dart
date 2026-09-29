@@ -60,23 +60,13 @@ class MapControlsWidget extends StatelessWidget {
             Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ],
           if (onToggleWeather != null) ...[
-            Container(
-              decoration: isRadarActive
-                  ? BoxDecoration(
-                      color: AppColors.brandSky.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(12),
-                    )
-                  : null,
-              child: IconButton(
-                icon: Icon(
-                  isRadarActive ? Icons.radar_rounded : Icons.cloud_outlined,
-                  color: isRadarActive
-                      ? AppColors.brandSky
-                      : (isDark ? Colors.white70 : AppColors.brandNavy),
-                ),
-                tooltip: isRadarActive ? 'Live Radar ON (Tap for Forecast)' : 'Live Weather & Zoom Earth Radar',
-                onPressed: onToggleWeather,
+            IconButton(
+              icon: Icon(
+                Icons.wb_sunny_outlined,
+                color: isDark ? Colors.white70 : AppColors.brandNavy,
               ),
+              tooltip: 'Live Weather & 24h Forecast',
+              onPressed: onToggleWeather,
             ),
             Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ],

@@ -249,7 +249,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _nameController,
                               label: 'Full Name',
-                              hint: 'e.g. Mark Lawrence',
+                              hint: 'Enter your full name',
                               prefixIcon: Icons.badge_outlined,
                               validator: (val) {
                                 if (val == null || val.trim().isEmpty) return 'Full name is required.';
@@ -261,7 +261,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _usernameController,
                               label: 'Username',
-                              hint: 'e.g. mark_lawrence',
+                              hint: 'Choose a unique username',
                               prefixIcon: Icons.alternate_email_rounded,
                               validator: (val) {
                                 if (val == null || val.trim().isEmpty) return 'Username is required.';
@@ -274,7 +274,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _emailController,
                               label: 'Email Address',
-                              hint: 'e.g. mark@example.com',
+                              hint: 'Enter your email address',
                               prefixIcon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
                               validator: (val) {
@@ -288,7 +288,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _phoneController,
                               label: 'Phone Number (Optional)',
-                              hint: 'e.g. +639171234567',
+                              hint: 'Enter your mobile number (optional)',
                               prefixIcon: Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
                             ),
@@ -297,7 +297,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _passwordController,
                               label: 'Password',
-                              hint: 'Min. 8 characters',
+                              hint: 'Create password (min. 8 characters)',
                               prefixIcon: Icons.lock_outline_rounded,
                               isPassword: true,
                               validator: (val) {
@@ -311,7 +311,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _confirmPasswordController,
                               label: 'Confirm Password',
-                              hint: 'Re-enter your password',
+                              hint: 'Re-enter your password to confirm',
                               prefixIcon: Icons.lock_clock_outlined,
                               isPassword: true,
                               validator: (val) {

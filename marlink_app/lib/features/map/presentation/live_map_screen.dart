@@ -256,20 +256,6 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 maxZoom: 20,
               ),
 
-              // 1b. Live Zoom Earth-Style Rain & Storm Radar Overlay (RainViewer)
-              if (weatherState.isRadarOverlayActive && weatherState.radarTileUrlTemplate != null)
-                TileLayer(
-                  key: ValueKey(weatherState.radarTileUrlTemplate),
-                  urlTemplate: weatherState.radarTileUrlTemplate!,
-                  userAgentPackageName: AppConfig.userAgentPackageName,
-                  tileBuilder: (context, tileWidget, tile) => Opacity(
-                    opacity: 0.60,
-                    child: tileWidget,
-                  ),
-                  maxNativeZoom: 12,
-                  maxZoom: 20,
-                ),
-
               // 2. Tracing Road Polyline between User and Target Member
               if (tracingState.isTracing && mapState.myLatLng != null && tracingState.tracedMember != null)
                 PolylineLayer(
@@ -1973,42 +1959,38 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 const SizedBox(height: 14),
                 Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
                 const SizedBox(height: 14),
-                // Zoom Earth Live Weather Radar Toggle
+                // Live Weather & 24h Forecast Button
                 InkWell(
                   borderRadius: BorderRadius.circular(14),
                   onTap: () {
-                    ref.read(weatherNotifierProvider.notifier).toggleRadarOverlay();
                     Navigator.pop(ctx);
+                    _showWeatherDetailsModal(context, ref.read(weatherNotifierProvider));
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: ref.watch(weatherNotifierProvider).isRadarOverlayActive
-                          ? AppColors.brandSky.withValues(alpha: 0.12)
-                          : (isDark ? const Color(0xFF131F38) : const Color(0xFFF8FAFC)),
+                      color: isDark ? const Color(0xFF131F38) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: ref.watch(weatherNotifierProvider).isRadarOverlayActive
-                            ? AppColors.brandSky
-                            : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                        width: ref.watch(weatherNotifierProvider).isRadarOverlayActive ? 1.8 : 1,
+                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                        width: 1,
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.radar_rounded, color: AppColors.brandSky, size: 22),
+                        const Icon(Icons.wb_sunny_outlined, color: AppColors.brandSky, size: 22),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                '⛈️ Zoom Earth Live Weather Radar',
+                                '🌤️ Live Weather & 24h Forecast',
                                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Real-time rain & storm cloud radar overlay',
+                                'View local temperature, rain probability, and hourly timeline',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -2017,14 +1999,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                             ],
                           ),
                         ),
-                        Switch.adaptive(
-                          value: ref.watch(weatherNotifierProvider).isRadarOverlayActive,
-                          onChanged: (_) {
-                            ref.read(weatherNotifierProvider.notifier).toggleRadarOverlay();
-                            Navigator.pop(ctx);
-                          },
-                          activeTrackColor: AppColors.brandSky,
-                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.brandSky),
                       ],
                     ),
                   ),
@@ -2211,24 +2186,6 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              if (weatherState.isRadarOverlayActive) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandSky.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'RADAR',
-                    style: TextStyle(
-                      color: AppColors.brandSky,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -2257,11 +2214,6 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       isScrollControlled: true,
       builder: (_) => WeatherForecastDialog(
         weather: weather,
-        isRadarActive: weatherState.isRadarOverlayActive,
-        onToggleRadar: () {
-          ref.read(weatherNotifierProvider.notifier).toggleRadarOverlay();
-          Navigator.pop(context);
-        },
       ),
     );
   }
