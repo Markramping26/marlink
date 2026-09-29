@@ -215,104 +215,79 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         const SizedBox(height: 18),
                       ],
 
-                      // Card Form Container
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF0F1A34).withValues(alpha: 0.80)
-                              : Colors.white.withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF1E2F54) : const Color(0xFFE2E8F0),
-                            width: 1.2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            MarLinkTextField(
-                              controller: _nameController,
-                              label: 'Full Name',
-                              hint: 'Your full name',
-                              prefixIcon: Icons.badge_outlined,
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) return 'Full name is required.';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
+                      // Spacious Form Fields (Clean Modern Mobile Layout)
+                      MarLinkTextField(
+                        controller: _nameController,
+                        label: 'Full Name',
+                        hint: 'Your full name',
+                        prefixIcon: Icons.badge_outlined,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Full name is required.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
 
-                            MarLinkTextField(
-                              controller: _usernameController,
-                              label: 'Username',
-                              hint: 'Choose a unique username',
-                              prefixIcon: Icons.alternate_email_rounded,
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) return 'Username is required.';
-                                if (val.trim().length < 3) return 'Username must be at least 3 characters.';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
+                      MarLinkTextField(
+                        controller: _usernameController,
+                        label: 'Username',
+                        hint: 'Choose a unique username',
+                        prefixIcon: Icons.alternate_email_rounded,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Username is required.';
+                          if (val.trim().length < 3) return 'Username must be at least 3 characters.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
 
-                            MarLinkTextField(
-                              controller: _emailController,
-                              label: 'Email Address',
-                              hint: 'name@example.com',
-                              prefixIcon: Icons.email_outlined,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) return 'Email is required.';
-                                if (!val.contains('@') || !val.contains('.')) return 'Enter a valid email address.';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
+                      MarLinkTextField(
+                        controller: _emailController,
+                        label: 'Email Address',
+                        hint: 'name@example.com',
+                        prefixIcon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Email is required.';
+                          if (!val.contains('@') || !val.contains('.')) return 'Enter a valid email address.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
 
-                            MarLinkTextField(
-                              controller: _phoneController,
-                              label: 'Phone Number (Optional)',
-                              hint: 'Mobile number (optional)',
-                              prefixIcon: Icons.phone_outlined,
-                              keyboardType: TextInputType.phone,
-                            ),
-                            const SizedBox(height: 14),
+                      MarLinkTextField(
+                        controller: _phoneController,
+                        label: 'Phone Number (Optional)',
+                        hint: 'Mobile number (optional)',
+                        prefixIcon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 14),
 
-                            MarLinkTextField(
-                              controller: _passwordController,
-                              label: 'Password',
-                              hint: 'At least 8 characters',
-                              prefixIcon: Icons.lock_outline_rounded,
-                              isPassword: true,
-                              validator: (val) {
-                                if (val == null || val.isEmpty) return 'Password is required.';
-                                if (val.length < 8) return 'Password must be at least 8 characters.';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
+                      MarLinkTextField(
+                        controller: _passwordController,
+                        label: 'Password',
+                        hint: 'At least 8 characters',
+                        prefixIcon: Icons.lock_outline_rounded,
+                        isPassword: true,
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'Password is required.';
+                          if (val.length < 8) return 'Password must be at least 8 characters.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
 
-                            MarLinkTextField(
-                              controller: _confirmPasswordController,
-                              label: 'Confirm Password',
-                              hint: 'Re-enter your password',
-                              prefixIcon: Icons.lock_clock_outlined,
-                              isPassword: true,
-                              validator: (val) {
-                                if (val != _passwordController.text) return 'Passwords do not match.';
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
+                      MarLinkTextField(
+                        controller: _confirmPasswordController,
+                        label: 'Confirm Password',
+                        hint: 'Re-enter your password',
+                        prefixIcon: Icons.lock_clock_outlined,
+                        isPassword: true,
+                        validator: (val) {
+                          if (val != _passwordController.text) return 'Passwords do not match.';
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 22),
 

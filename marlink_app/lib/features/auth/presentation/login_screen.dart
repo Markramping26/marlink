@@ -141,34 +141,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // App Brand Icon with Soft Radial Aura (No double container!)
+                        // App Brand Icon with Soft Radial Aura (Pure Floating Emblem)
                         Stack(
                           alignment: Alignment.center,
                           children: [
                             Container(
-                              width: 62,
-                              height: 62,
+                              width: 72,
+                              height: 72,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.42),
-                                    blurRadius: 32,
-                                    spreadRadius: 6,
+                                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.45),
+                                    blurRadius: 36,
+                                    spreadRadius: 8,
                                   ),
                                 ],
                               ),
                             ),
                             Image.asset(
                               'assets/images/app_logo.png',
-                              width: 74,
-                              height: 74,
+                              width: 76,
+                              height: 94,
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) => const Center(
                                 child: Icon(
                                   Icons.share_location_rounded,
                                   color: AppColors.brandSky,
-                                  size: 40,
+                                  size: 44,
                                 ),
                               ),
                             ),
@@ -180,22 +180,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const Text(
                           'MarLink',
                           style: TextStyle(
-                            fontSize: 30,
+                            fontSize: 32,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.9,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 5),
                         Text(
                           'Connect  •  Locate  •  Stay Together',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w500,
                             color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                             letterSpacing: 0.3,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
 
                         // Error Banner if login fails
                         if (_localError != null) ...[
@@ -233,116 +233,72 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(height: 20),
                         ],
 
-                        // Elevated Form Card
-                        Container(
-                          padding: const EdgeInsets.all(22),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF0B1733).withValues(alpha: 0.85)
-                                : Colors.white.withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF1E2F54) : const Color(0xFFE2E8F0),
-                              width: 1.2,
+                        // Username / Email input
+                        MarLinkTextField(
+                          controller: _loginController,
+                          label: 'Email or Username',
+                          hint: 'Username or email address',
+                          prefixIcon: Icons.alternate_email_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Please enter your username or email.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Password input
+                        MarLinkTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          hint: 'Enter your password',
+                          prefixIcon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          validator: (val) {
+                            if (val == null || val.isEmpty) {
+                              return 'Please enter your password.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Remember Me Checkbox Row
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Checkbox(
+                                value: _rememberMe,
+                                onChanged: (val) => setState(() => _rememberMe = val ?? true),
+                                activeColor: AppColors.brandSky,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                              ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.07),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Keep me logged in',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.4,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Enter your credentials to access your circle',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Username / Email input
-                              MarLinkTextField(
-                                controller: _loginController,
-                                label: 'Email or Username',
-                                hint: 'Username or email address',
-                                prefixIcon: Icons.alternate_email_rounded,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'Please enter your username or email.';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Password input
-                              MarLinkTextField(
-                                controller: _passwordController,
-                                label: 'Password',
-                                hint: 'Enter your password',
-                                prefixIcon: Icons.lock_outline_rounded,
-                                isPassword: true,
-                                validator: (val) {
-                                  if (val == null || val.isEmpty) {
-                                    return 'Please enter your password.';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Remember Me Checkbox Row
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: Checkbox(
-                                      value: _rememberMe,
-                                      onChanged: (val) => setState(() => _rememberMe = val ?? true),
-                                      activeColor: AppColors.brandSky,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Keep me logged in',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 22),
-
-                              // Primary Action Button
-                              MarLinkButton(
-                                text: 'Sign In',
-                                icon: Icons.arrow_forward_rounded,
-                                onPressed: _handleLogin,
-                                isLoading: authState.isLoading,
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 24),
+
+                        // Primary Action Button
+                        MarLinkButton(
+                          text: 'Sign In',
+                          icon: Icons.arrow_forward_rounded,
+                          onPressed: _handleLogin,
+                          isLoading: authState.isLoading,
+                        ),
+                        const SizedBox(height: 28),
 
                         // Switch to Register Screen Footer
                         Row(
@@ -373,7 +329,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),

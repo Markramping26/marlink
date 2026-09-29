@@ -13,8 +13,8 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConfig.apiBaseUrl,
-        connectTimeout: const Duration(seconds: 12),
-        receiveTimeout: const Duration(seconds: 12),
+        connectTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 45),
         headers: {
           'Accept': 'application/json',
         },
@@ -35,7 +35,16 @@ class ApiClient {
         },
         onError: (DioException e, handler) {
           final response = e.response;
-          String message = 'Cannot reach server at ${AppConfig.serverAddress}. Please verify your device is connected to the same Wi-Fi.';
+          String message;
+
+          if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+            message = 'Connection timed out. The cloud server may be waking up, please try again in a few moments.';
+          } else if (AppConfig.productionServerUrl.trim().isNotEmpty) {
+            message = 'Unable to reach MarLink server at ${AppConfig.serverAddress}. Please verify your internet connection.';
+          } else {
+            message = 'Cannot reach local server at ${AppConfig.serverAddress}. Please verify your device is connected to the same Wi-Fi.';
+          }
+
           Map<String, dynamic>? errors;
 
           if (response?.data is Map<String, dynamic>) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import '../../../../core/config/app_config.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/auth_state.dart';
@@ -18,6 +20,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late final AnimationController _animController;
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _fadeAnimation;
+
+  bool _minTimeElapsed = false;
+  bool _hasNavigated = false;
+  AuthState? _latestAuthState;
 
   @override
   void initState() {
@@ -38,6 +44,57 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _animController.forward();
+
+    // 1. Wake up the cloud backend in background early
+    _warmupBackendServer();
+
+    // 2. Enforce a deliberate, premium minimum duration of 2.2 seconds
+    Future.delayed(const Duration(milliseconds: 2200), () {
+      if (!mounted) return;
+      setState(() {
+        _minTimeElapsed = true;
+      });
+      _checkAndNavigate();
+    });
+  }
+
+  void _warmupBackendServer() {
+    try {
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(seconds: 8),
+        ),
+      );
+      dio.get(AppConfig.serverOrigin).catchError((_) => Response(
+        requestOptions: RequestOptions(path: ''),
+      ));
+    } catch (_) {}
+  }
+
+  void _checkAndNavigate() {
+    if (!_minTimeElapsed || _hasNavigated || !mounted) return;
+
+    final AuthState authState = _latestAuthState ?? ref.read(authNotifierProvider);
+    if (authState.status == AuthStatus.authenticated) {
+      _hasNavigated = true;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, __, ___) => const MainNavigationScreen(),
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+        ),
+      );
+    } else if (authState.status == AuthStatus.unauthenticated || authState.status == AuthStatus.error) {
+      _hasNavigated = true;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, __, ___) => const LoginScreen(),
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+        ),
+      );
+    }
   }
 
   @override
@@ -49,15 +106,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authNotifierProvider, (previous, next) {
-      if (next.status == AuthStatus.authenticated) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-        );
-      } else if (next.status == AuthStatus.unauthenticated || next.status == AuthStatus.error) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      }
+      _latestAuthState = next;
+      _checkAndNavigate();
     });
 
     return Scaffold(
@@ -92,41 +142,41 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Edge-to-edge Squircle Logo with Soft Ambient Aura
+                    // Pure Floating Glowing Pin Emblem
                     Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Soft glow halo
+                        // Soft radial aura glow
                         Container(
-                          width: 80,
-                          height: 80,
+                          width: 86,
+                          height: 86,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0EA5E9).withValues(alpha: 0.45),
-                                blurRadius: 36,
-                                spreadRadius: 6,
+                                color: const Color(0xFF0EA5E9).withValues(alpha: 0.50),
+                                blurRadius: 44,
+                                spreadRadius: 8,
                               ),
                             ],
                           ),
                         ),
-                        // Native squircle image tile (no double container!)
+                        // Clean vector pin emblem (No dark boxes or containers!)
                         Image.asset(
                           'assets/images/app_logo.png',
-                          width: 92,
-                          height: 92,
+                          width: 82,
+                          height: 100,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => Container(
-                            width: 92,
-                            height: 92,
+                            width: 82,
+                            height: 82,
                             decoration: BoxDecoration(
                               color: AppColors.brandBlue,
                               borderRadius: BorderRadius.circular(22),
                             ),
                             child: const Icon(
                               Icons.share_location_rounded,
-                              size: 48,
+                              size: 44,
                               color: Colors.white,
                             ),
                           ),
