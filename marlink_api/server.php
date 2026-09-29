@@ -580,7 +580,9 @@ if ($uri === '/download' || $uri === '/download-apk' || $uri === '/api/v1/downlo
         readfile($apkFile);
         exit;
     } else {
-        respond(false, 'APK file not found on server.', null, null, 404);
+        // High-speed CDN fallback directly from GitHub release asset
+        header('Location: https://github.com/Markramping26/marlink/raw/main/marlink_api/MarLink.apk', true, 302);
+        exit;
     }
 }
 

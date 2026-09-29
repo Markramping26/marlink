@@ -1,7 +1,6 @@
 .git
 .github
 marlink_app/
-*.apk
 marlink_api/composer.phar
 marlink_api/.env
 marlink_api/vendor/
