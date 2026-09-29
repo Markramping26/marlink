@@ -584,6 +584,17 @@ if ($uri === '/download' || $uri === '/download-apk' || $uri === '/api/v1/downlo
     }
 }
 
+// Logo Asset Endpoint for Social Previews
+if ($uri === '/logo.png') {
+    $logoFile = __DIR__ . '/logo.png';
+    if (file_exists($logoFile)) {
+        header('Content-Type: image/png');
+        header('Cache-Control: public, max-age=604800');
+        readfile($logoFile);
+        exit;
+    }
+}
+
 // -------------------------------------------------------------
 // ROUTES
 // -------------------------------------------------------------
@@ -599,7 +610,21 @@ if ($uri === '' || $uri === '/' || $uri === '/api' || $uri === '/api/v1' || $uri
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download MarLink - Real-Time GPS & Family Locator</title>
+    <title>👉 Download MarLink APK (57.2 MB)</title>
+    
+    <!-- Open Graph / Facebook / Messenger / WhatsApp Rich Previews -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://marlink-api.onrender.com/">
+    <meta property="og:title" content="👉 Download MarLink APK (57.2 MB)">
+    <meta property="og:description" content="Official Android Release • Real-Time GPS & Family Locator. Tap to download.">
+    <meta property="og:image" content="https://marlink-api.onrender.com/logo.png">
+    
+    <!-- Twitter Preview -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="👉 Download MarLink APK (57.2 MB)">
+    <meta name="twitter:description" content="Official Android Release • Real-Time GPS & Family Locator. Tap to download.">
+    <meta name="twitter:image" content="https://marlink-api.onrender.com/logo.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
