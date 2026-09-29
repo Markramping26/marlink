@@ -31,9 +31,23 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     setState(() => _currentIndex = index);
   }
 
+  late final List<Widget> _screens;
+
   @override
   void initState() {
     super.initState();
+    _screens = [
+      LiveMapScreen(
+        onNavigateToChat: () => _navigateToIndex(2),
+        onNavigateToAlerts: () => _navigateToIndex(3),
+      ),
+      const RoomsScreen(),
+      RoomChatScreen(
+        onOpenMapTab: () => _navigateToIndex(0),
+      ),
+      const AlertsScreen(),
+      const ProfileScreen(),
+    ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 1. Request notification permissions
       NotificationService.instance.requestPermission();
@@ -137,25 +151,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       }
     });
 
-    final screens = [
-      LiveMapScreen(
-        onNavigateToChat: () => _navigateToIndex(2),
-        onNavigateToAlerts: () => _navigateToIndex(3),
-      ),
-      const RoomsScreen(),
-      RoomChatScreen(
-        onOpenMapTab: () => _navigateToIndex(0),
-      ),
-      const AlertsScreen(),
-      const ProfileScreen(),
-    ];
-
     return ValueListenableBuilder<bool>(
       valueListenable: PipService.instance.isPipMode,
       builder: (context, isPip, child) {
         if (isPip) {
-          // In Picture-in-Picture mode, only render the LiveMapScreen
-          return screens[0];
+          // In Picture-in-Picture mode, retain the same LiveMapScreen instance
+          return _screens[0];
         }
 
         return PopScope(
@@ -178,7 +179,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               children: [
                 IndexedStack(
                   index: _currentIndex,
-                  children: screens,
+                  children: _screens,
                 ),
 
                 // Floating Ongoing Call Chip (If call minimized)

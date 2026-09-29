@@ -20,6 +20,7 @@ import 'package:marlink_app/features/map/providers/location_provider.dart';
 import 'package:marlink_app/features/map/providers/tracing_provider.dart';
 import 'package:marlink_app/features/alerts/domain/models/alert_model.dart';
 import 'package:marlink_app/features/alerts/providers/alert_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/map_controls_widget.dart';
 import 'widgets/member_details_bottom_sheet.dart';
 import 'widgets/member_marker_widget.dart';
@@ -41,16 +42,33 @@ class LiveMapScreen extends ConsumerStatefulWidget {
 class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   final MapController _mapController = MapController();
   double _currentZoom = 15.0;
-  String _selectedMapStyle = 'satellite'; // Defaults to Satellite for realistic houses & 3D view
+  static String _persistedMapStyle = 'satellite';
+  String _selectedMapStyle = _persistedMapStyle;
   bool _hasInitialCentered = false;
 
   @override
   void initState() {
     super.initState();
+    _loadPersistedMapStyle();
     PipService.instance.setAutoPip(true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initInitialFocus();
     });
+  }
+
+  void _loadPersistedMapStyle() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('marlink_selected_map_style');
+      if (saved != null && saved.isNotEmpty && saved != _selectedMapStyle) {
+        _persistedMapStyle = saved;
+        if (mounted) {
+          setState(() {
+            _selectedMapStyle = saved;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   void _initInitialFocus() async {
@@ -1900,9 +1918,14 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
 
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () {
+      onTap: () async {
+        _persistedMapStyle = id;
         setState(() => _selectedMapStyle = id);
         Navigator.pop(ctx);
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('marlink_selected_map_style', id);
+        } catch (_) {}
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
