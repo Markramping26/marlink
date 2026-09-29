@@ -9,6 +9,7 @@ import 'package:marlink_app/core/services/pip_service.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/utils/haversine_calculator.dart';
 import 'package:marlink_app/core/widgets/marlink_avatar.dart';
+import 'package:marlink_app/features/auth/domain/models/user_model.dart';
 import 'package:marlink_app/features/auth/providers/auth_provider.dart';
 import 'package:marlink_app/features/chat/presentation/call_screen.dart';
 import 'package:marlink_app/features/chat/providers/call_provider.dart';
@@ -294,15 +295,17 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
               // 3. Member Markers Layer
               MarkerLayer(
                 markers: [
-                  // Self marker (Only visible when location sharing is ON)
+                  // Self marker (Instant real-time hardware GPS position with custom avatar pin)
                   if (sharingStatus != 'off' && mapState.myLatLng != null)
                     Marker(
                       point: mapState.myLatLng!,
-                      width: 64,
-                      height: 64,
+                      width: 96,
+                      height: 96,
                       alignment: Alignment.center,
                       child: _buildSelfMarker(
+                        authUser,
                         sharingStatus,
+                        mapState.currentSpeedKmh,
                         selfAlert,
                         (tracingState.isTracing && tracingState.tracedMember != null)
                             ? HaversineCalculator.calculateBearing(
@@ -311,13 +314,15 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                                 tracingState.tracedMember!.latitude,
                                 tracingState.tracedMember!.longitude,
                               )
-                            : null,
+                            : (mapState.myPosition?.heading ?? 0.0),
                         tracingState.isNavigationFollowMode,
                       ),
                     ),
 
-                  // Room Member Markers (Only active members with valid coordinates)
-                  ...mapState.memberLocations.where((m) => m.hasValidCoordinates).map((member) {
+                  // Room Member Markers (Exclude self to eliminate lagging duplicate ghost pin)
+                  ...mapState.memberLocations
+                      .where((m) => m.hasValidCoordinates && m.userId != authUser?.id)
+                      .map((member) {
                     final isSelected = mapState.selectedMember?.userId == member.userId ||
                         tracingState.tracedMember?.userId == member.userId;
                     final memberAlert = alertState.activeAlerts
@@ -588,75 +593,198 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   );
 }
 
-  Widget _buildSelfMarker(String sharingStatus, [AlertModel? selfAlert, double? bearing, bool isNavFollow = false]) {
+  Widget _buildSelfMarker(
+    UserModel? authUser,
+    String sharingStatus,
+    double currentSpeedKmh, [
+    AlertModel? selfAlert,
+    double? bearing,
+    bool isNavFollow = false,
+  ]) {
     final hasAlert = selfAlert != null && selfAlert.isActive;
     final isOff = sharingStatus == 'off';
     final isPaused = sharingStatus == 'paused';
-    final color = hasAlert
+    final isMoving = currentSpeedKmh > 2.0;
+
+    final Color pinColor = hasAlert
         ? const Color(0xFFE53935)
         : (isOff
             ? AppColors.alertEmergency
-            : (isPaused ? AppColors.alertWarning : AppColors.brandBlue));
+            : (isPaused
+                ? AppColors.alertWarning
+                : (isMoving ? AppColors.statusOnline : AppColors.brandSky)));
 
-    return Stack(
-      alignment: Alignment.center,
-      clipBehavior: Clip.none,
-      children: [
-        if (hasAlert)
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFE53935).withValues(alpha: 0.25),
-              border: Border.all(color: const Color(0xFFE53935), width: 1.5),
-            ),
-          ),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: 0.2),
-          ),
-        ),
-        if (isNavFollow && bearing != null)
-          Transform.rotate(
-            angle: bearing * math.pi / 180,
-            child: const Icon(
-              Icons.navigation_rounded,
-              color: AppColors.brandSky,
-              size: 32,
-            ),
-          )
-        else ...[
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: (hasAlert ? Colors.red : Colors.black).withValues(alpha: 0.35),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                hasAlert ? 'SOS' : (isOff ? 'OFF' : (isPaused ? '||' : 'YOU')),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 6.5,
-                  fontWeight: FontWeight.w900,
-                ),
+    final Color borderColor = hasAlert
+        ? Colors.white
+        : (isMoving ? AppColors.statusOnline : AppColors.brandSky);
+
+    final displayName = authUser?.name ?? 'You';
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      child: ClipRect(
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // Subtle live GPS ripple/halo when moving or alert
+                  if (isMoving || hasAlert)
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: pinColor.withValues(alpha: 0.18),
+                        border: Border.all(
+                          color: pinColor.withValues(alpha: 0.45),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+
+                  // Pin & Label Column
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // 1. Directional Heading Arrow if in Navigation / Following mode
+                      if (isNavFollow && bearing != null)
+                        Transform.rotate(
+                          angle: bearing * math.pi / 180,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 2),
+                            child: const Icon(
+                              Icons.navigation_rounded,
+                              color: AppColors.brandSky,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+
+                      // 2. Location Pin (Teardrop shape with User Initials / Avatar)
+                      CustomPaint(
+                        painter: LocationPinPainter(
+                          pinColor: pinColor,
+                          borderColor: borderColor,
+                          isSelected: true,
+                          isAlert: hasAlert,
+                        ),
+                        child: Container(
+                          width: 44,
+                          height: 52,
+                          padding: const EdgeInsets.only(top: 3.0, left: 3.0, right: 3.0),
+                          alignment: Alignment.topCenter,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                            ),
+                            child: ClipOval(
+                              child: MarLinkAvatar(
+                                imageUrl: authUser?.profile?.avatarUrl,
+                                name: displayName,
+                                radius: 19,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 2),
+
+                      // 3. User Name & Real-Time Speed Pill
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 120),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: hasAlert
+                              ? const Color(0xFFDC2626)
+                              : AppColors.brandNavy.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: hasAlert
+                                ? Colors.white
+                                : (isMoving ? AppColors.statusOnline : AppColors.brandSky),
+                            width: 0.8,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: hasAlert
+                                  ? Colors.red.withValues(alpha: 0.5)
+                                  : Colors.black.withValues(alpha: 0.25),
+                              blurRadius: hasAlert ? 6 : 3,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (hasAlert) ...[
+                              const Text(
+                                '🚨 SOS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ] else ...[
+                              Flexible(
+                                child: Text(
+                                  displayName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9.0,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              if (isMoving) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.statusOnline.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: AppColors.statusOnline.withValues(alpha: 0.6),
+                                      width: 0.6,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${currentSpeedKmh.round()} km/h',
+                                    style: const TextStyle(
+                                      color: AppColors.statusOnline,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ],
+        ),
+      ),
     );
   }
 

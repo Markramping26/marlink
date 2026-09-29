@@ -146,7 +146,7 @@ class _MemberMarkerWidgetState extends State<MemberMarkerWidget>
                     children: [
                       // 1. Location Pin (Teardrop shape with avatar)
                       CustomPaint(
-                        painter: _LocationPinPainter(
+                        painter: LocationPinPainter(
                           pinColor: pinColor,
                           borderColor: borderColor,
                           isSelected: widget.isSelected,
@@ -178,7 +178,7 @@ class _MemberMarkerWidgetState extends State<MemberMarkerWidget>
 
                       // 2. Member Name & Status Pill
                       Container(
-                        constraints: const BoxConstraints(maxWidth: 88),
+                        constraints: const BoxConstraints(maxWidth: 120),
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: isAlertActive
@@ -235,13 +235,24 @@ class _MemberMarkerWidgetState extends State<MemberMarkerWidget>
                                 ),
                               ),
                               if (isMoving) ...[
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${member.speed!.round()}k',
-                                  style: const TextStyle(
-                                    color: AppColors.statusOnline,
-                                    fontSize: 8.0,
-                                    fontWeight: FontWeight.w800,
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.statusOnline.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: AppColors.statusOnline.withValues(alpha: 0.6),
+                                      width: 0.6,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '${member.speed!.round()} km/h',
+                                    style: const TextStyle(
+                                      color: AppColors.statusOnline,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -261,13 +272,13 @@ class _MemberMarkerWidgetState extends State<MemberMarkerWidget>
   }
 }
 
-class _LocationPinPainter extends CustomPainter {
+class LocationPinPainter extends CustomPainter {
   final Color pinColor;
   final Color borderColor;
   final bool isSelected;
   final bool isAlert;
 
-  const _LocationPinPainter({
+  const LocationPinPainter({
     required this.pinColor,
     required this.borderColor,
     this.isSelected = false,
@@ -323,7 +334,7 @@ class _LocationPinPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _LocationPinPainter oldDelegate) {
+  bool shouldRepaint(covariant LocationPinPainter oldDelegate) {
     return oldDelegate.pinColor != pinColor ||
         oldDelegate.borderColor != borderColor ||
         oldDelegate.isSelected != isSelected ||
