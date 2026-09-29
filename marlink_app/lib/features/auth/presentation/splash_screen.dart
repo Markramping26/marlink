@@ -210,56 +210,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
             ),
           ),
-
-          // 3. Subtle Bottom Status / Footer
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 40,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.0,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            const Color(0xFF38BDF8).withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 9),
-                      const Text(
-                        'Securing live network...',
-                        style: TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'v1.0.0 • Protected by MarLink Shield',
-                    style: TextStyle(
-                      color: Color(0xFF475569),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
