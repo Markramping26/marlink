@@ -22,7 +22,8 @@ class WeatherService {
       final url = 'https://api.open-meteo.com/v1/forecast?'
           'latitude=$lat&longitude=$lng'
           '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m'
-          '&forecast_days=1&timezone=auto';
+          '&hourly=temperature_2m,precipitation_probability,weather_code,is_day'
+          '&forecast_days=2&timezone=auto';
 
       final response = await _dio.get(url);
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {

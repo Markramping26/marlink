@@ -263,9 +263,10 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   urlTemplate: weatherState.radarTileUrlTemplate!,
                   userAgentPackageName: AppConfig.userAgentPackageName,
                   tileBuilder: (context, tileWidget, tile) => Opacity(
-                    opacity: 0.65,
+                    opacity: 0.60,
                     child: tileWidget,
                   ),
+                  maxNativeZoom: 12,
                   maxZoom: 20,
                 ),
 
@@ -668,6 +669,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   void _handleMemberTap(MemberLocationModel member, MapState mapState) {
+    if (PipService.instance.isPipMode.value) return;
     ref.read(mapNotifierProvider.notifier).selectMember(member);
     ref.read(weatherNotifierProvider.notifier).fetchMemberWeather(
       member.userId,
@@ -1084,6 +1086,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   void _showTripStatsBottomSheet(MapState mapState) {
+    if (PipService.instance.isPipMode.value) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0F1B35),
@@ -1611,6 +1614,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   void _showSharingOptions(BuildContext context) {
+    if (PipService.instance.isPipMode.value) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -1717,6 +1721,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   void _showRoomSelectorModal(BuildContext context, RoomsState roomState) {
+    if (PipService.instance.isPipMode.value) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentRoom = roomState.currentRoom;
 
@@ -1881,18 +1886,28 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   void _showMapStyleSelectorModal(BuildContext context) {
+    if (PipService.instance.isPipMode.value) return;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
+        if (PipService.instance.isPipMode.value) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (Navigator.of(ctx).canPop()) Navigator.of(ctx).pop();
+          });
+          return const SizedBox.shrink();
+        }
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2016,6 +2031,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
@@ -2221,6 +2237,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   }
 
   void _showWeatherDetailsModal(BuildContext context, WeatherState weatherState) {
+    if (PipService.instance.isPipMode.value) return;
     final weather = weatherState.userWeather ??
         WeatherModel(
           temperature: 28.0,

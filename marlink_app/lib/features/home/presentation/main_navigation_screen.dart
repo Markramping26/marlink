@@ -36,6 +36,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
+    PipService.instance.isPipMode.addListener(_handlePipChange);
     _screens = [
       LiveMapScreen(
         onNavigateToChat: () => _navigateToIndex(2),
@@ -113,8 +114,16 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     });
   }
 
+  void _handlePipChange() {
+    if (PipService.instance.isPipMode.value && mounted) {
+      // If PiP is entered, dismiss any open bottom sheet, modal, or dialog
+      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+    }
+  }
+
   @override
   void dispose() {
+    PipService.instance.isPipMode.removeListener(_handlePipChange);
     _msgSub?.cancel();
     ref.read(globalNotificationServiceProvider).stop();
     super.dispose();
@@ -163,6 +172,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
+
+            // 1. If any modal bottom sheet, dialog, or secondary route is open, pop it first!
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+              return;
+            }
+
             if (_currentIndex != 0) {
               setState(() => _currentIndex = 0);
             } else {

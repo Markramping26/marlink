@@ -33,6 +33,7 @@ class MarLinkApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: PipService.instance.navigatorKey,
       title: 'MarLink',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,

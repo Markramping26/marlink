@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class PipService {
@@ -8,6 +8,7 @@ class PipService {
 
   static const MethodChannel _channel = MethodChannel('com.marlink.app/pip');
 
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   final ValueNotifier<bool> isPipMode = ValueNotifier<bool>(false);
 
   void initialize() {
@@ -15,13 +16,30 @@ class PipService {
       if (call.method == 'onPipModeChanged') {
         final bool inPip = call.arguments as bool? ?? false;
         isPipMode.value = inPip;
+        if (inPip) {
+          dismissOpenModals();
+        }
       }
     });
+  }
+
+  /// Automatically dismisses any open modal bottom sheets, dialogs, or sub-routes
+  /// so that the miniature PiP window displays only the clean navigation HUD without layout overflows.
+  void dismissOpenModals() {
+    try {
+      final nav = navigatorKey.currentState;
+      if (nav != null) {
+        nav.popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      debugPrint('PipService: Failed to dismiss modals: $e');
+    }
   }
 
   /// Request the native Android host to enter Picture-in-Picture mode
   Future<bool> enterPip() async {
     try {
+      dismissOpenModals();
       final bool? result = await _channel.invokeMethod<bool>('enterPip');
       return result ?? false;
     } catch (e) {
