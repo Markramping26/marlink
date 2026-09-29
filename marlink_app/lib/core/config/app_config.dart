@@ -84,7 +84,10 @@ class AppConfig {
   static const String appTagline = 'Connect. Locate. Stay Together.';
   static const String appVersion = '1.0.0';
 
-  // Tile Server for OpenStreetMap
+  // Tile Servers for Map Layers
   static const String osmTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const String satelliteTileUrl = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+  static const String darkTileUrl = 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+  static const String terrainTileUrl = 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}';
   static const String userAgentPackageName = 'com.marlink.app';
 }

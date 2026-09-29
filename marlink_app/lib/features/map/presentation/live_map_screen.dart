@@ -41,11 +41,60 @@ class LiveMapScreen extends ConsumerStatefulWidget {
 class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   final MapController _mapController = MapController();
   double _currentZoom = 15.0;
+  String _selectedMapStyle = 'satellite'; // Defaults to Satellite for realistic houses & 3D view
+  bool _hasInitialCentered = false;
 
   @override
   void initState() {
     super.initState();
     PipService.instance.setAutoPip(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initInitialFocus();
+    });
+  }
+
+  void _initInitialFocus() async {
+    final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: false);
+    if (pos != null && mounted) {
+      _mapController.move(LatLng(pos.latitude, pos.longitude), 16.0);
+      _hasInitialCentered = true;
+    }
+  }
+
+  String _getTileUrlForStyle(String style) {
+    switch (style) {
+      case 'streets':
+        return AppConfig.osmTileUrl;
+      case 'dark':
+        return AppConfig.darkTileUrl;
+      case 'terrain':
+        return AppConfig.terrainTileUrl;
+      case 'satellite':
+      default:
+        return AppConfig.satelliteTileUrl;
+    }
+  }
+
+  void _fitMembers(List<MemberLocationModel> members, LatLng? myLocation) {
+    final points = <LatLng>[];
+    if (myLocation != null) points.add(myLocation);
+    for (final m in members) {
+      if (m.hasValidCoordinates) {
+        points.add(LatLng(m.latitude, m.longitude));
+      }
+    }
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      _mapController.move(points.first, 16.0);
+      return;
+    }
+    final bounds = LatLngBounds.fromPoints(points);
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: bounds,
+        padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 120),
+      ),
+    );
   }
 
   @override
@@ -67,6 +116,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         if (ref.read(tracingNotifierProvider).isTracing) {
           ref.read(tracingNotifierProvider.notifier).stopTracing();
         }
+        _hasInitialCentered = false;
         ref.read(mapNotifierProvider.notifier).clearRoomLocations();
         ref.read(mapNotifierProvider.notifier).fetchRoomLocations();
       }
@@ -74,6 +124,19 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
 
     // Dynamically update traced member and road route when map updates
     ref.listen<MapState>(mapNotifierProvider, (previous, next) {
+      if (!_hasInitialCentered) {
+        if (next.myLatLng != null) {
+          _mapController.move(next.myLatLng!, 16.0);
+          _hasInitialCentered = true;
+        } else {
+          final valid = next.memberLocations.where((m) => m.hasValidCoordinates).toList();
+          if (valid.isNotEmpty) {
+            _fitMembers(valid, null);
+            _hasInitialCentered = true;
+          }
+        }
+      }
+
       final tState = ref.read(tracingNotifierProvider);
       if (tState.isTracing && next.myLatLng != null && tState.tracedMember != null) {
         // Sync traced member to latest coordinates & speed from room
@@ -124,19 +187,24 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. OpenStreetMap Tile Layer
+          // 1. Dynamic Map Tile Layer (Satellite / Real Houses / Streets / Dark / Terrain)
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter: defaultLatLng,
               initialZoom: _currentZoom,
               minZoom: 3,
-              maxZoom: 18,
+              maxZoom: 20,
+              onPositionChanged: (position, hasGesture) {
+                _currentZoom = position.zoom ?? _currentZoom;
+              },
             ),
             children: [
               TileLayer(
-                urlTemplate: AppConfig.osmTileUrl,
+                key: ValueKey(_selectedMapStyle),
+                urlTemplate: _getTileUrlForStyle(_selectedMapStyle),
                 userAgentPackageName: AppConfig.userAgentPackageName,
+                maxZoom: 20,
               ),
 
               // 2. Tracing Road Polyline between User and Target Member
@@ -171,8 +239,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
               // 3. Member Markers Layer
               MarkerLayer(
                 markers: [
-                  // Self marker
-                  if (mapState.myLatLng != null)
+                  // Self marker (Only visible when location sharing is ON)
+                  if (sharingStatus != 'off' && mapState.myLatLng != null)
                     Marker(
                       point: mapState.myLatLng!,
                       width: 64,
@@ -319,7 +387,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                               color: Colors.transparent,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(24),
-                                onTap: () => _showSharingOptions(context),
+                                onTap: () => _toggleLocationSharing(sharingStatus, context),
+                                onLongPress: () => _showSharingOptions(context),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                                   decoration: BoxDecoration(
@@ -380,6 +449,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   bottom: tracingState.isTracing ? 275 : 24,
                   child: MapControlsWidget(
                     onPip: () => PipService.instance.enterPip(),
+                    onSwitchMapStyle: () => _showMapStyleSelectorModal(context),
+                    isSatelliteActive: _selectedMapStyle == 'satellite',
                     onToggleNavigationFollow: tracingState.isTracing
                         ? () {
                             ref.read(tracingNotifierProvider.notifier).toggleNavigationFollowMode();
@@ -395,17 +466,25 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                           }
                         : null,
                     isNavigationFollowActive: tracingState.isNavigationFollowMode,
-                    onRecenter: () {
-                      if (mapState.myLatLng != null) {
-                        _mapController.move(mapState.myLatLng!, _currentZoom);
+                    onRecenter: () async {
+                      final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
+                      if (pos != null) {
+                        _mapController.move(LatLng(pos.latitude, pos.longitude), 16.5);
+                      } else if (mapState.myLatLng != null) {
+                        _mapController.move(mapState.myLatLng!, 16.5);
+                      } else {
+                        final validMembers = mapState.memberLocations.where((m) => m.hasValidCoordinates).toList();
+                        if (validMembers.isNotEmpty) {
+                          _fitMembers(validMembers, null);
+                        }
                       }
                     },
                     onZoomIn: () {
-                      setState(() => _currentZoom = (_currentZoom + 1).clamp(3.0, 18.0));
+                      setState(() => _currentZoom = (_currentZoom + 1).clamp(3.0, 20.0));
                       _mapController.move(_mapController.camera.center, _currentZoom);
                     },
                     onZoomOut: () {
-                      setState(() => _currentZoom = (_currentZoom - 1).clamp(3.0, 18.0));
+                      setState(() => _currentZoom = (_currentZoom - 1).clamp(3.0, 20.0));
                       _mapController.move(_mapController.camera.center, _currentZoom);
                     },
                   ),
@@ -1710,5 +1789,217 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         );
       },
     );
+  }
+
+  void _showMapStyleSelectorModal(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Icon(Icons.layers_rounded, color: AppColors.brandSky, size: 22),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Map Layer & Style',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusOnline.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Realistic View',
+                        style: TextStyle(
+                          color: AppColors.statusOnline,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildMapStyleTile(
+                  ctx: ctx,
+                  id: 'satellite',
+                  title: '🛰️ Satellite (Realistic Houses & Aerial)',
+                  subtitle: 'Real aerial view showing actual houses, roofs, and streets',
+                  isRecommended: true,
+                ),
+                const SizedBox(height: 8),
+                _buildMapStyleTile(
+                  ctx: ctx,
+                  id: 'streets',
+                  title: '🗺️ Standard Streets (OpenStreetMap)',
+                  subtitle: 'Vector roadmap with clear street names and highways',
+                ),
+                const SizedBox(height: 8),
+                _buildMapStyleTile(
+                  ctx: ctx,
+                  id: 'dark',
+                  title: '🌙 Dark Night Mode',
+                  subtitle: 'High-contrast dark map optimized for nighttime tracking',
+                ),
+                const SizedBox(height: 8),
+                _buildMapStyleTile(
+                  ctx: ctx,
+                  id: 'terrain',
+                  title: '⛰️ 3D Terrain & Contours',
+                  subtitle: 'Topographic elevation, mountain slopes, and landmarks',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMapStyleTile({
+    required BuildContext ctx,
+    required String id,
+    required String title,
+    required String subtitle,
+    bool isRecommended = false,
+  }) {
+    final isSelected = _selectedMapStyle == id;
+    final isDark = Theme.of(ctx).brightness == Brightness.dark;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () {
+        setState(() => _selectedMapStyle = id);
+        Navigator.pop(ctx);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.brandSky.withValues(alpha: 0.12)
+              : (isDark ? const Color(0xFF131F38) : const Color(0xFFF8FAFC)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.brandSky
+                : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+            width: isSelected ? 1.8 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isSelected ? AppColors.brandSky : null,
+                        ),
+                      ),
+                      if (isRecommended) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.brandSky.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'BEST',
+                            style: TextStyle(
+                              color: AppColors.brandSky,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+              color: isSelected ? AppColors.brandSky : (isDark ? Colors.white30 : Colors.black26),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _toggleLocationSharing(String currentStatus, BuildContext context) async {
+    if (currentStatus == 'on') {
+      ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
+      await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'off');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🔴 Location sharing turned OFF (Hidden from Map)'),
+            backgroundColor: AppColors.alertEmergency,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
+      await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on');
+      final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
+      if (pos != null && mounted) {
+        _mapController.move(LatLng(pos.latitude, pos.longitude), 16.5);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🟢 Live location sharing is ON & broadcasting'),
+            backgroundColor: AppColors.statusOnline,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }

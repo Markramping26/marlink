@@ -6,6 +6,8 @@ class MapControlsWidget extends StatelessWidget {
   final VoidCallback onZoomIn;
   final VoidCallback onZoomOut;
   final VoidCallback? onPip;
+  final VoidCallback? onSwitchMapStyle;
+  final bool isSatelliteActive;
   final VoidCallback? onToggleNavigationFollow;
   final bool isNavigationFollowActive;
 
@@ -15,6 +17,8 @@ class MapControlsWidget extends StatelessWidget {
     required this.onZoomIn,
     required this.onZoomOut,
     this.onPip,
+    this.onSwitchMapStyle,
+    this.isSatelliteActive = false,
     this.onToggleNavigationFollow,
     this.isNavigationFollowActive = false,
   });
@@ -66,6 +70,17 @@ class MapControlsWidget extends StatelessWidget {
                     : 'Start Realtime Navigation Follow',
                 onPressed: onToggleNavigationFollow,
               ),
+            ),
+            Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          ],
+          if (onSwitchMapStyle != null) ...[
+            IconButton(
+              icon: Icon(
+                isSatelliteActive ? Icons.satellite_alt_rounded : Icons.layers_rounded,
+                color: isSatelliteActive ? AppColors.brandSky : (isDark ? Colors.white70 : AppColors.brandNavy),
+              ),
+              tooltip: 'Map Layer (Satellite / Real Houses)',
+              onPressed: onSwitchMapStyle,
             ),
             Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ],

@@ -119,6 +119,21 @@ function initSqliteSchema(PDO $pdo): void {
             updated_at DATETIME,
             UNIQUE(room_id, user_id)
         );
+        CREATE TABLE IF NOT EXISTS locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            accuracy REAL,
+            altitude REAL,
+            speed REAL DEFAULT 0,
+            heading REAL DEFAULT 0,
+            battery_pct INTEGER DEFAULT 100,
+            is_moving INTEGER DEFAULT 0,
+            recorded_at DATETIME,
+            created_at DATETIME,
+            updated_at DATETIME
+        );
         CREATE TABLE IF NOT EXISTS location_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -296,6 +311,47 @@ function syncDefaultAndExistingUsers(PDO $pdo): void {
         if (!$chk->fetch()) {
             $ins = $pdo->prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role, is_location_enabled, joined_at, created_at, updated_at) VALUES (?, ?, ?, 1, datetime('now'), datetime('now'), datetime('now'))");
             $ins->execute([$m[0], $m[1], $m[2]]);
+        }
+    }
+
+    // 7. Ensure `locations` table exists and seed member locations (Tupi & Polomolok)
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'sqlite') {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS locations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                accuracy REAL,
+                altitude REAL,
+                speed REAL DEFAULT 0,
+                heading REAL DEFAULT 0,
+                battery_pct INTEGER DEFAULT 100,
+                is_moving INTEGER DEFAULT 0,
+                recorded_at DATETIME,
+                created_at DATETIME,
+                updated_at DATETIME
+            );
+        ");
+    }
+
+    $defaultLocations = [
+        [1, 6.3076379, 124.9733526, 32.7, 481.8, 0.0, 101.6, 85, 0], // Mark: Tupi
+        [2, 6.2276992, 125.0618086, 18.4, 403.4, 0.0, 234.2, 92, 0], // Anna: Polomolok
+        [3, 6.2250000, 125.0600000, 15.0, 410.0, 3.5, 180.0, 65, 1], // John: Polomolok
+        [4, 6.3076579, 124.9732431, 20.0, 480.0, 0.0, 0.0, 95, 0],   // Loleng: Tupi
+    ];
+    foreach ($defaultLocations as $loc) {
+        $chk = $pdo->prepare("SELECT id FROM locations WHERE user_id = ? LIMIT 1");
+        $chk->execute([$loc[0]]);
+        if (!$chk->fetch()) {
+            $nowFunc = ($driver === 'sqlite') ? "datetime('now')" : "NOW()";
+            $ins = $pdo->prepare("
+                INSERT OR IGNORE INTO locations (user_id, latitude, longitude, accuracy, altitude, speed, heading, battery_pct, is_moving, recorded_at, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {$nowFunc}, {$nowFunc}, {$nowFunc})
+            ");
+            $ins->execute($loc);
         }
     }
 }
@@ -939,7 +995,7 @@ function getRoomMembersData(PDO $db, int $roomId): array {
         LEFT JOIN user_profiles p ON p.user_id = u.id
         LEFT JOIN locations l ON l.user_id = u.id
         WHERE rm.room_id = ?
-        ORDER BY rm.role = 'owner' DESC, u.name ASC
+        ORDER BY CASE WHEN rm.role = 'owner' THEN 0 ELSE 1 END ASC, u.name ASC
     ");
     $stmt->execute([$roomId]);
     $rows = $stmt->fetchAll();
@@ -1032,22 +1088,42 @@ if ($method === 'POST' && $uri === '/api/v1/locations/update') {
     }
 
     // Upsert into `locations`
-    $stmt = $db->prepare("
-        INSERT INTO locations (user_id, latitude, longitude, accuracy, altitude, speed, heading, battery_pct, is_moving, recorded_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())
-        ON DUPLICATE KEY UPDATE
-            latitude = VALUES(latitude),
-            longitude = VALUES(longitude),
-            accuracy = VALUES(accuracy),
-            altitude = VALUES(altitude),
-            speed = VALUES(speed),
-            heading = VALUES(heading),
-            battery_pct = VALUES(battery_pct),
-            is_moving = VALUES(is_moving),
-            recorded_at = NOW(),
-            updated_at = NOW()
-    ");
-    $stmt->execute([$currentUser['id'], $lat, $lng, $accuracy, $altitude, $speed, $heading, $battery, $isMoving]);
+    $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'sqlite') {
+        $stmt = $db->prepare("
+            INSERT INTO locations (user_id, latitude, longitude, accuracy, altitude, speed, heading, battery_pct, is_moving, recorded_at, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))
+            ON CONFLICT(user_id) DO UPDATE SET
+                latitude = excluded.latitude,
+                longitude = excluded.longitude,
+                accuracy = excluded.accuracy,
+                altitude = excluded.altitude,
+                speed = excluded.speed,
+                heading = excluded.heading,
+                battery_pct = excluded.battery_pct,
+                is_moving = excluded.is_moving,
+                recorded_at = datetime('now'),
+                updated_at = datetime('now')
+        ");
+        $stmt->execute([$currentUser['id'], $lat, $lng, $accuracy, $altitude, $speed, $heading, $battery, $isMoving]);
+    } else {
+        $stmt = $db->prepare("
+            INSERT INTO locations (user_id, latitude, longitude, accuracy, altitude, speed, heading, battery_pct, is_moving, recorded_at, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW())
+            ON DUPLICATE KEY UPDATE
+                latitude = VALUES(latitude),
+                longitude = VALUES(longitude),
+                accuracy = VALUES(accuracy),
+                altitude = VALUES(altitude),
+                speed = VALUES(speed),
+                heading = VALUES(heading),
+                battery_pct = VALUES(battery_pct),
+                is_moving = VALUES(is_moving),
+                recorded_at = NOW(),
+                updated_at = NOW()
+        ");
+        $stmt->execute([$currentUser['id'], $lat, $lng, $accuracy, $altitude, $speed, $heading, $battery, $isMoving]);
+    }
 
     // Insert history trail
     $stmt = $db->prepare("INSERT INTO location_history (user_id, latitude, longitude, speed, heading, recorded_at, created_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
