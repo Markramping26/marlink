@@ -60,6 +60,12 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    PipService.instance.setAutoPip(false);
+    super.dispose();
+  }
+
   void _loadPersistedMapStyle() async {
     try {
       final prefs = await SharedPreferences.getInstance();

@@ -1211,7 +1211,7 @@ if ($method === 'GET' && preg_match('#^/api/v1/rooms/(\d+)/messages$#', $uri, $m
                 'label'     => $msg['location_label'] ?: 'Shared Location',
             ] : null,
             'attachments'    => $attachmentsByMsg[$msg['id']] ?? [],
-            'created_at'     => $msg['created_at'],
+            'created_at'     => $msg['created_at'] ? gmdate('Y-m-d\TH:i:s\Z', strtotime($msg['created_at'] . ' UTC')) : gmdate('Y-m-d\TH:i:s\Z'),
         ];
     }, $messages);
 
@@ -1267,7 +1267,7 @@ if ($method === 'POST' && preg_match('#^/api/v1/rooms/(\d+)/messages$#', $uri, $
             'label'     => $label ?: 'Shared Location',
         ] : null,
         'attachments'    => [],
-        'created_at'     => date('c'),
+        'created_at'     => gmdate('Y-m-d\TH:i:s\Z'),
     ], null, 201);
 }
 
@@ -1340,7 +1340,7 @@ if ($method === 'POST' && preg_match('#^/api/v1/rooms/(\d+)/messages/media$#', $
                 'mime_type' => $mimeType,
             ]
         ],
-        'created_at'     => date('c'),
+        'created_at'     => gmdate('Y-m-d\TH:i:s\Z'),
     ], null, 201);
 }
 

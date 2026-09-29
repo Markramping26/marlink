@@ -98,11 +98,13 @@ class HaversineCalculator {
   /// Format relative timestamp.
   static String formatRelativeTime(DateTime? timestamp) {
     if (timestamp == null) return 'Never';
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
+    final tsUtc = timestamp.toUtc();
+    final nowUtc = DateTime.now().toUtc();
+    final difference = nowUtc.difference(tsUtc);
 
-    if (difference.inSeconds < 5) return 'Just now';
-    if (difference.inSeconds < 60) return '${difference.inSeconds} seconds ago';
+    // If future or within 10 seconds due to network/device clock drift:
+    if (difference.isNegative || difference.inSeconds < 10) return 'Just now';
+    if (difference.inSeconds < 60) return '${difference.inSeconds}s ago';
     if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
     if (difference.inHours < 24) return '${difference.inHours}h ago';
     return '${difference.inDays}d ago';

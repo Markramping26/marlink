@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/services/pip_service.dart';
 import '../data/auth_repository.dart';
 import '../domain/models/user_model.dart';
 import '../domain/models/user_profile_model.dart';
@@ -102,6 +103,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    PipService.instance.setAutoPip(false);
     await _repository.logout();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }

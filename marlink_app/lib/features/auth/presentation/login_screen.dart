@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/pip_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/marlink_button.dart';
 import '../../../../core/widgets/marlink_text_field.dart';
@@ -20,6 +21,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _rememberMe = true;
   String? _localError;
+
+  @override
+  void initState() {
+    super.initState();
+    PipService.instance.setAutoPip(false);
+  }
 
   @override
   void dispose() {
@@ -49,10 +56,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final authState = ref.watch(authNotifierProvider);
+    return ValueListenableBuilder<bool>(
+      valueListenable: PipService.instance.isPipMode,
+      builder: (context, isPip, _) {
+        if (isPip) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF040A18),
+            body: Center(
+              child: Icon(Icons.shield_rounded, color: AppColors.brandSky, size: 36),
+            ),
+          );
+        }
 
-    return Scaffold(
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final authState = ref.watch(authNotifierProvider);
+
+        return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -375,28 +394,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-
-                        // Trust & Security Notice
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.verified_user_outlined,
-                              size: 13,
-                              color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              'End-to-End Encrypted GPS & Telemetry Protection',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
@@ -406,6 +404,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    );
+      },
     );
   }
 }

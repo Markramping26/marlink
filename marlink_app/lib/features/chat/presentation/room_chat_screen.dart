@@ -40,9 +40,6 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
   }
 
   void _showLocationOptionsSheet(BuildContext context) {
-    final authUser = ref.read(authNotifierProvider).user;
-    final sharingStatus = authUser?.profile?.sharingStatus ?? 'on';
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -52,182 +49,212 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 10, bottom: 6),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.location_on, color: AppColors.brandSky, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Location Sharing & Privacy Controls',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
+        return Consumer(
+          builder: (context, ref, _) {
+            final authUser = ref.watch(authNotifierProvider).user;
+            final sharingStatus = authUser?.profile?.sharingStatus ?? 'on';
 
-              // 1. Instant Pin to Chat
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandBlue.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 10, bottom: 6),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  child: const Icon(Icons.pin_drop, color: AppColors.brandBlue, size: 22),
-                ),
-                title: const Text('Pin Current Location to Chat', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Send an exact GPS coordinates map card to room members', style: TextStyle(fontSize: 12)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          ),
-                          SizedBox(width: 12),
-                          Text('Acquiring high-accuracy GPS position...'),
-                        ],
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on, color: AppColors.brandSky, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Location Sharing & Privacy Controls',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+
+                  // 1. Instant Pin to Chat
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandBlue.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
                       ),
-                      duration: Duration(seconds: 4),
+                      child: const Icon(Icons.pin_drop, color: AppColors.brandBlue, size: 22),
                     ),
-                  );
+                    title: const Text('Pin Current Location to Chat', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Send an exact GPS coordinates map card to room members', style: TextStyle(fontSize: 12)),
+                    onTap: () async {
+                      Navigator.pop(ctx);
 
-                  final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
-                  if (pos != null && context.mounted) {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ref.read(chatNotifierProvider.notifier).sendLocationMessage(
-                          pos.latitude,
-                          pos.longitude,
-                          'My Current Location',
+                      // Fast-path: use cached position from active map tracking
+                      final cachedPos = ref.read(mapNotifierProvider).myPosition;
+                      if (cachedPos != null) {
+                        ref.read(chatNotifierProvider.notifier).sendLocationMessage(
+                              cachedPos.latitude,
+                              cachedPos.longitude,
+                              'My Current Location',
+                            );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('📍 Location pin sent to chat.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+
+                      // Fallback: acquire fresh coordinates
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Acquiring high-accuracy GPS position...'),
+                            ],
+                          ),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+
+                      final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
+                      if (pos != null && context.mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ref.read(chatNotifierProvider.notifier).sendLocationMessage(
+                              pos.latitude,
+                              pos.longitude,
+                              'My Current Location',
+                            );
+                      }
+                    },
+                  ),
+
+                  // 2. Share Live Location (Continuous)
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusOnline.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.sensors, color: AppColors.statusOnline, size: 22),
+                    ),
+                    title: const Text('Share Live Location (🟢 ON)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Stream real-time GPS coordinate updates on map', style: TextStyle(fontSize: 12)),
+                    trailing: sharingStatus == 'on' ? const Icon(Icons.check_circle, color: AppColors.statusOnline) : null,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
+                      ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on');
+                      ref.read(chatNotifierProvider.notifier).sendTextMessage("🟢 Started sharing live location with room.");
+                      ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: false);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Live location sharing is now ACTIVE.')),
                         );
-                  }
-                },
-              ),
-
-              // 2. Share Live Location (Continuous)
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.statusOnline.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                      }
+                    },
                   ),
-                  child: const Icon(Icons.sensors, color: AppColors.statusOnline, size: 22),
-                ),
-                title: const Text('Share Live Location (🟢 ON)', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Stream real-time GPS coordinate updates on map', style: TextStyle(fontSize: 12)),
-                trailing: sharingStatus == 'on' ? const Icon(Icons.check_circle, color: AppColors.statusOnline) : null,
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
-                  ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
-                  ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on');
-                  ref.read(chatNotifierProvider.notifier).sendTextMessage("🟢 Started sharing live location with room.");
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Live location sharing is now ACTIVE.')),
-                    );
-                  }
-                },
-              ),
 
-              // 3. Share for 1 Hour
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandSky.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                  // 3. Share for 1 Hour
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandSky.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.timer_outlined, color: AppColors.brandSky, size: 22),
+                    ),
+                    title: const Text('Share for 1 Hour (⏱️ 60 Mins)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Stream GPS for 60 minutes, then automatically pause', style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
+                      ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on', durationMinutes: 60);
+                      ref.read(chatNotifierProvider.notifier).sendTextMessage("⏱️ Started sharing live location for 1 hour.");
+                      ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: false);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sharing live location for the next 1 hour.')),
+                        );
+                      }
+                    },
                   ),
-                  child: const Icon(Icons.timer_outlined, color: AppColors.brandSky, size: 22),
-                ),
-                title: const Text('Share for 1 Hour (⏱️ 60 Mins)', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Stream GPS for 60 minutes, then automatically pause', style: TextStyle(fontSize: 12)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
-                  ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
-                  ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on', durationMinutes: 60);
-                  ref.read(chatNotifierProvider.notifier).sendTextMessage("⏱️ Started sharing live location for 1 hour.");
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sharing live location for the next 1 hour.')),
-                    );
-                  }
-                },
-              ),
 
-              // 4. Pause Sharing
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.alertWarning.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                  // 4. Pause Sharing
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.alertWarning.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.pause_circle_outline, color: AppColors.alertWarning, size: 22),
+                    ),
+                    title: const Text('Pause Sharing (🟡 PAUSED)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Keep room active but temporarily freeze GPS updates', style: TextStyle(fontSize: 12)),
+                    trailing: sharingStatus == 'paused' ? const Icon(Icons.check_circle, color: AppColors.alertWarning) : null,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
+                      ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'paused');
+                      ref.read(chatNotifierProvider.notifier).sendTextMessage("⏸️ Paused live location sharing.");
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Location sharing is now PAUSED.')),
+                        );
+                      }
+                    },
                   ),
-                  child: const Icon(Icons.pause_circle_outline, color: AppColors.alertWarning, size: 22),
-                ),
-                title: const Text('Pause Sharing (⚪ PAUSED)', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Keep room active but temporarily freeze GPS updates', style: TextStyle(fontSize: 12)),
-                trailing: sharingStatus == 'paused' ? const Icon(Icons.check_circle, color: AppColors.alertWarning) : null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
-                  ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'paused');
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Location sharing is now PAUSED.')),
-                    );
-                  }
-                },
-              ),
 
-              // 5. Turn Off Location
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.alertEmergency.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                  // 5. Turn Off Location
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.alertEmergency.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.location_off_outlined, color: AppColors.alertEmergency, size: 22),
+                    ),
+                    title: const Text('Turn Off Location (🔴 OFF)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Completely stop location broadcasting', style: TextStyle(fontSize: 12)),
+                    trailing: sharingStatus == 'off' ? const Icon(Icons.check_circle, color: AppColors.alertEmergency) : null,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
+                      ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'off');
+                      ref.read(chatNotifierProvider.notifier).sendTextMessage("🔴 Stopped sharing live location.");
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Location broadcasting is turned OFF.')),
+                        );
+                      }
+                    },
                   ),
-                  child: const Icon(Icons.location_off_outlined, color: AppColors.alertEmergency, size: 22),
-                ),
-                title: const Text('Turn Off Location (🔴 OFF)', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Completely stop location broadcasting', style: TextStyle(fontSize: 12)),
-                trailing: sharingStatus == 'off' ? const Icon(Icons.check_circle, color: AppColors.alertEmergency) : null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
-                  ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'off');
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Location broadcasting is turned OFF.')),
-                    );
-                  }
-                },
+                  const SizedBox(height: 8),
+                ],
               ),
-              const SizedBox(height: 8),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -358,6 +385,35 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
       ),
       body: Column(
         children: [
+          if ((authUser?.profile?.sharingStatus ?? 'on') == 'paused')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: AppColors.alertWarning.withValues(alpha: 0.15),
+              child: Row(
+                children: [
+                  const Icon(Icons.pause_circle_outline, color: AppColors.alertWarning, size: 18),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Live location sharing is paused.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.alertWarning),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
+                      ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on');
+                      ref.read(chatNotifierProvider.notifier).sendTextMessage("🟢 Resumed live location sharing.");
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('Resume', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.brandSky)),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: _buildMessageList(chatState, authUser?.id),
           ),

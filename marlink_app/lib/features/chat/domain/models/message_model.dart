@@ -93,7 +93,26 @@ class MessageModel {
       locationLabel: lbl,
       attachments: attList,
       isDeleted: json['is_deleted'] ?? false,
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      createdAt: _parseUtcDateTime(json['created_at']),
     );
+  }
+
+  static DateTime _parseUtcDateTime(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    final str = raw.toString().trim();
+    if (str.isEmpty) return DateTime.now();
+
+    // If string has no timezone indicator (e.g. MySQL "2026-09-29 08:38:20"),
+    // append 'Z' so DateTime treats it as UTC, then convert to local timezone.
+    if (!str.endsWith('Z') && !str.contains('+') && !RegExp(r'-\d\d:\d\d').hasMatch(str)) {
+      final isoStr = '${str.replaceAll(' ', 'T')}Z';
+      final parsed = DateTime.tryParse(isoStr);
+      if (parsed != null) {
+        return parsed.toLocal();
+      }
+    }
+
+    final parsed = DateTime.tryParse(str);
+    return (parsed ?? DateTime.now()).toLocal();
   }
 }

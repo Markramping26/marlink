@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/pip_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/marlink_button.dart';
 import '../../../../core/widgets/marlink_text_field.dart';
@@ -23,6 +24,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
 
   String? _localError;
+
+  @override
+  void initState() {
+    super.initState();
+    PipService.instance.setAutoPip(false);
+  }
 
   @override
   void dispose() {
@@ -61,10 +68,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final authState = ref.watch(authNotifierProvider);
+    return ValueListenableBuilder<bool>(
+      valueListenable: PipService.instance.isPipMode,
+      builder: (context, isPip, _) {
+        if (isPip) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF040A18),
+            body: Center(
+              child: Icon(Icons.shield_rounded, color: AppColors.brandSky, size: 36),
+            ),
+          );
+        }
 
-    return Scaffold(
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final authState = ref.watch(authNotifierProvider);
+
+        return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -331,27 +350,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         onPressed: _handleRegister,
                         isLoading: authState.isLoading,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Trust Note
-                      Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.shield_outlined, size: 14, color: AppColors.statusOnline),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Your location data is private & encrypted',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
                       // Footer
                       Center(
@@ -389,6 +388,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         ),
       ),
+    );
+      },
     );
   }
 }
