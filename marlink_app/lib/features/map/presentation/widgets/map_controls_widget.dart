@@ -8,7 +8,6 @@ class MapControlsWidget extends StatelessWidget {
   final VoidCallback? onPip;
   final VoidCallback? onSwitchMapStyle;
   final bool isSatelliteActive;
-  final VoidCallback? onToggleNavigationFollow;
   final bool isNavigationFollowActive;
 
   const MapControlsWidget({
@@ -19,7 +18,6 @@ class MapControlsWidget extends StatelessWidget {
     this.onPip,
     this.onSwitchMapStyle,
     this.isSatelliteActive = false,
-    this.onToggleNavigationFollow,
     this.isNavigationFollowActive = false,
   });
 
@@ -46,33 +44,6 @@ class MapControlsWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Google Maps-Style Realtime Navigation Follow Toggle
-          if (onToggleNavigationFollow != null) ...[
-            Container(
-              decoration: isNavigationFollowActive
-                  ? BoxDecoration(
-                      color: AppColors.statusOnline.withValues(alpha: 0.18),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(15),
-                        topRight: Radius.circular(15),
-                      ),
-                    )
-                  : null,
-              child: IconButton(
-                icon: Icon(
-                  isNavigationFollowActive ? Icons.navigation_rounded : Icons.explore_outlined,
-                  color: isNavigationFollowActive
-                      ? AppColors.statusOnline
-                      : (isDark ? AppColors.brandSky : AppColors.brandBlue),
-                ),
-                tooltip: isNavigationFollowActive
-                    ? 'Exit Navigation Follow (Wide)'
-                    : 'Start Realtime Navigation Follow',
-                onPressed: onToggleNavigationFollow,
-              ),
-            ),
-            Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-          ],
           if (onSwitchMapStyle != null) ...[
             IconButton(
               icon: Icon(
@@ -93,11 +64,26 @@ class MapControlsWidget extends StatelessWidget {
             ),
             Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ],
-          IconButton(
-            icon: const Icon(Icons.my_location_rounded),
-            tooltip: 'My Location',
-            onPressed: onRecenter,
-            color: isDark ? AppColors.brandSky : AppColors.brandBlue,
+          // Single Unified Smart Location & Follow Navigation Button
+          Container(
+            decoration: isNavigationFollowActive
+                ? BoxDecoration(
+                    color: AppColors.statusOnline.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(12),
+                  )
+                : null,
+            child: IconButton(
+              icon: Icon(
+                isNavigationFollowActive ? Icons.navigation_rounded : Icons.my_location_rounded,
+                color: isNavigationFollowActive
+                    ? AppColors.statusOnline
+                    : (isDark ? AppColors.brandSky : AppColors.brandBlue),
+              ),
+              tooltip: isNavigationFollowActive
+                  ? 'Following (Tap to View Route Overview)'
+                  : 'My Location (Tap to Center & Follow)',
+              onPressed: onRecenter,
+            ),
           ),
           Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           IconButton(

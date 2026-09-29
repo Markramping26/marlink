@@ -197,6 +197,14 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
               maxZoom: 20,
               onPositionChanged: (position, hasGesture) {
                 _currentZoom = position.zoom ?? _currentZoom;
+                if (hasGesture) {
+                  // User manually swiped or zoomed the map:
+                  // Automatically disengage follow mode so camera NEVER snaps back!
+                  final tracing = ref.read(tracingNotifierProvider);
+                  if (tracing.isNavigationFollowMode) {
+                    ref.read(tracingNotifierProvider.notifier).setNavigationFollowMode(false);
+                  }
+                }
               },
             ),
             children: [
@@ -451,22 +459,28 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                     onPip: () => PipService.instance.enterPip(),
                     onSwitchMapStyle: () => _showMapStyleSelectorModal(context),
                     isSatelliteActive: _selectedMapStyle == 'satellite',
-                    onToggleNavigationFollow: tracingState.isTracing
-                        ? () {
-                            ref.read(tracingNotifierProvider.notifier).toggleNavigationFollowMode();
-                            final nextMode = !tracingState.isNavigationFollowMode;
-                            if (nextMode && mapState.myLatLng != null) {
-                              _mapController.move(mapState.myLatLng!, 17.5);
-                            } else if (!nextMode && mapState.myLatLng != null && tracingState.tracedMember != null) {
-                              _fitTraceBounds(
-                                mapState.myLatLng!,
-                                LatLng(tracingState.tracedMember!.latitude, tracingState.tracedMember!.longitude),
-                              );
-                            }
-                          }
-                        : null,
                     isNavigationFollowActive: tracingState.isNavigationFollowMode,
                     onRecenter: () async {
+                      if (tracingState.isTracing) {
+                        // In tracing mode: toggle between Follow Me and Full Route Overview
+                        if (tracingState.isNavigationFollowMode) {
+                          ref.read(tracingNotifierProvider.notifier).setNavigationFollowMode(false);
+                          if (mapState.myLatLng != null && tracingState.tracedMember != null) {
+                            _fitTraceBounds(
+                              mapState.myLatLng!,
+                              LatLng(tracingState.tracedMember!.latitude, tracingState.tracedMember!.longitude),
+                            );
+                          }
+                        } else {
+                          ref.read(tracingNotifierProvider.notifier).setNavigationFollowMode(true);
+                          if (mapState.myLatLng != null) {
+                            _mapController.move(mapState.myLatLng!, 17.5);
+                          }
+                        }
+                        return;
+                      }
+
+                      // Normal mode: smoothly center on user position and capture fresh GPS
                       final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
                       if (pos != null) {
                         _mapController.move(LatLng(pos.latitude, pos.longitude), 16.5);
@@ -1858,13 +1872,6 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   id: 'streets',
                   title: '🗺️ Standard Streets (OpenStreetMap)',
                   subtitle: 'Vector roadmap with clear street names and highways',
-                ),
-                const SizedBox(height: 8),
-                _buildMapStyleTile(
-                  ctx: ctx,
-                  id: 'dark',
-                  title: '🌙 Dark Night Mode',
-                  subtitle: 'High-contrast dark map optimized for nighttime tracking',
                 ),
                 const SizedBox(height: 8),
                 _buildMapStyleTile(
