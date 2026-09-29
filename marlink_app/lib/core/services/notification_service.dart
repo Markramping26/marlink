@@ -22,6 +22,7 @@ class NotificationService {
     required String body,
     bool isAlert = false,
     bool isCall = false,
+    bool isNavigation = false,
     int? id,
   }) async {
     try {
@@ -30,6 +31,7 @@ class NotificationService {
         'body': body,
         'isAlert': isAlert,
         'isCall': isCall,
+        'isNavigation': isNavigation,
         if (id != null) 'id': id,
       });
     } catch (e) {

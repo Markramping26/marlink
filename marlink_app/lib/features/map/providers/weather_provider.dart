@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/haversine_calculator.dart';
 import '../data/services/weather_service.dart';
 import '../domain/models/weather_model.dart';
 
@@ -39,11 +40,34 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
 
   final WeatherService _service = WeatherService.instance;
   DateTime? _lastUserFetch;
+  double? _lastLat;
+  double? _lastLng;
 
-  Future<void> fetchUserWeather(double lat, double lng, {String locationName = 'My Location'}) async {
+  Future<void> fetchUserWeather(
+    double lat,
+    double lng, {
+    String locationName = 'My Location',
+    bool force = false,
+  }) async {
     final now = DateTime.now();
-    // Throttle user fetch to once every 2 minutes
-    if (_lastUserFetch != null && now.difference(_lastUserFetch!).inMinutes < 2 && state.userWeather != null) {
+
+    // Check if user has physically relocated > 500 meters
+    bool locationShifted = false;
+    if (_lastLat != null && _lastLng != null) {
+      final movedMeters = HaversineCalculator.distanceBetweenMeters(_lastLat!, _lastLng!, lat, lng);
+      if (movedMeters > 500) {
+        locationShifted = true;
+      }
+    } else {
+      locationShifted = true;
+    }
+
+    // Only skip if within 2 minutes AND location hasn't shifted AND not forced
+    if (!force &&
+        !locationShifted &&
+        _lastUserFetch != null &&
+        now.difference(_lastUserFetch!).inMinutes < 2 &&
+        state.userWeather != null) {
       return;
     }
 
@@ -51,6 +75,8 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
     final weather = await _service.fetchWeather(lat: lat, lng: lng, locationName: locationName);
     if (weather != null) {
       _lastUserFetch = now;
+      _lastLat = lat;
+      _lastLng = lng;
       state = state.copyWith(userWeather: weather, isLoading: false);
     } else {
       state = state.copyWith(isLoading: false);

@@ -61,6 +61,8 @@ final tracingNotifierProvider =
 class TracingNotifier extends StateNotifier<TracingState> {
   TracingNotifier() : super(const TracingState());
 
+  static const int navigationNotificationId = 7777;
+
   void startTracing(MemberLocationModel member, LatLng? myLocation) {
     state = state.copyWith(
       tracedMember: member,
@@ -80,14 +82,17 @@ class TracingNotifier extends StateNotifier<TracingState> {
       );
       final distStr = HaversineCalculator.formatDistance(distanceMeters);
       NotificationService.instance.showNotification(
+        id: navigationNotificationId,
         title: '🎯 Tracing ${member.displayName}',
-        body: 'Road navigation active • $distStr away',
+        body: 'Calculating road route • $distStr',
         isAlert: false,
+        isNavigation: true,
       );
     }
   }
 
   void stopTracing() {
+    NotificationService.instance.cancelNotification(navigationNotificationId);
     state = const TracingState();
   }
 
@@ -124,6 +129,31 @@ class TracingNotifier extends StateNotifier<TracingState> {
         );
 
         final step = route?.currentStep;
+        if (state.tracedMember != null) {
+          final member = state.tracedMember!;
+          if (step != null && route != null) {
+            final stepDistClean = HaversineCalculator.formatDistance(step.distanceMeters, includeAway: false);
+            final emoji = step.maneuverEmoji;
+            final roadTitle = step.roadName.isNotEmpty ? step.roadName : step.instruction;
+
+            NotificationService.instance.showNotification(
+              id: navigationNotificationId,
+              title: '$emoji In $stepDistClean • $roadTitle',
+              body: '${step.instruction} • ${route.formattedDistance} (${route.formattedDuration}) to ${member.displayName}',
+              isAlert: false,
+              isNavigation: true,
+            );
+          } else if (route != null) {
+            NotificationService.instance.showNotification(
+              id: navigationNotificationId,
+              title: '🎯 Tracing ${member.displayName}',
+              body: '${route.formattedDistance} remaining (${route.formattedDuration}) • Road navigation active',
+              isAlert: false,
+              isNavigation: true,
+            );
+          }
+        }
+
         if (state.isSoundEnabled &&
             step != null &&
             step.instruction != state.lastChimeInstruction) {

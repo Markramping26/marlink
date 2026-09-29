@@ -81,9 +81,10 @@ class MainActivity : FlutterActivity() {
                     val body = call.argument<String>("body") ?: ""
                     val isAlert = call.argument<Boolean>("isAlert") ?: false
                     val isCall = call.argument<Boolean>("isCall") ?: false
+                    val isNavigation = call.argument<Boolean>("isNavigation") ?: false
                     val id = call.argument<Int>("id") ?: (System.currentTimeMillis() % 100000).toInt()
 
-                    showSystemNotification(id, title, body, isAlert, isCall)
+                    showSystemNotification(id, title, body, isAlert, isCall, isNavigation)
                     result.success(true)
                 }
                 "playChime" -> {
@@ -215,7 +216,14 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun showSystemNotification(id: Int, title: String, body: String, isAlert: Boolean, isCall: Boolean) {
+    private fun showSystemNotification(
+        id: Int,
+        title: String,
+        body: String,
+        isAlert: Boolean,
+        isCall: Boolean,
+        isNavigation: Boolean = false
+    ) {
         val notificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -252,14 +260,19 @@ class MainActivity : FlutterActivity() {
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(Notification.BigTextStyle().bigText(body))
-                .setAutoCancel(true)
+                .setAutoCancel(!isNavigation)
                 .setContentIntent(pendingIntent)
 
             if (largeIcon != null) {
                 builder.setLargeIcon(largeIcon)
             }
 
-            if (isCall) {
+            if (isNavigation) {
+                builder.setOngoing(true)
+                builder.setOnlyAlertOnce(true)
+                builder.setColor(Color.parseColor("#10b981")) // Navigation green
+                builder.setCategory(Notification.CATEGORY_NAVIGATION)
+            } else if (isCall) {
                 builder.setColor(Color.parseColor("#10b981")) // Emerald green
                 builder.setCategory(Notification.CATEGORY_CALL)
             } else if (isAlert) {
@@ -278,7 +291,7 @@ class MainActivity : FlutterActivity() {
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(Notification.BigTextStyle().bigText(body))
-                .setAutoCancel(true)
+                .setAutoCancel(!isNavigation)
                 .setContentIntent(pendingIntent)
                 .setPriority(if (isCall || isAlert) Notification.PRIORITY_MAX else Notification.PRIORITY_HIGH)
 
@@ -286,7 +299,10 @@ class MainActivity : FlutterActivity() {
                 builder.setLargeIcon(largeIcon)
             }
 
-            if (isCall) {
+            if (isNavigation) {
+                builder.setOngoing(true)
+                builder.setOnlyAlertOnce(true)
+            } else if (isCall) {
                 builder.setVibrate(longArrayOf(0, 1000, 500, 1000))
             } else if (isAlert) {
                 builder.setVibrate(longArrayOf(0, 500, 200, 500))

@@ -27,12 +27,13 @@ class HaversineCalculator {
   }
 
   /// Format distance into user-friendly representation (meters vs kilometers).
-  static String formatDistance(double meters) {
+  static String formatDistance(double meters, {bool includeAway = true}) {
+    final suffix = includeAway ? ' away' : '';
     if (meters < 1000) {
-      return '${meters.round()} m away';
+      return '${meters.round()} m$suffix';
     } else {
       final km = meters / 1000.0;
-      return '${km.toStringAsFixed(1)} km away';
+      return '${km.toStringAsFixed(1)} km$suffix';
     }
   }
 

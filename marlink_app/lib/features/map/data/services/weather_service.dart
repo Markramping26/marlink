@@ -12,6 +12,33 @@ class WeatherService {
     ),
   );
 
+  /// Fast reverse geocode to resolve city/locality name for live GPS coordinates
+  Future<String?> reverseGeocodeLocality(double lat, double lng) async {
+    try {
+      final res = await _dio.get(
+        'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lng&localityLanguage=en',
+        options: Options(
+          sendTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+        ),
+      );
+      if (res.statusCode == 200 && res.data is Map<String, dynamic>) {
+        final data = res.data as Map<String, dynamic>;
+        final locality = data['locality'] as String? ?? '';
+        final city = data['city'] as String? ?? '';
+        final subdivision = data['principalSubdivision'] as String? ?? '';
+        if (locality.isNotEmpty && city.isNotEmpty && locality != city) {
+          return '$locality, $city';
+        } else if (locality.isNotEmpty) {
+          return locality;
+        } else if (city.isNotEmpty) {
+          return subdivision.isNotEmpty ? '$city, $subdivision' : city;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Fetch real-time weather from Open-Meteo (100% Free, No API Key needed)
   Future<WeatherModel?> fetchWeather({
     required double lat,
@@ -25,11 +52,21 @@ class WeatherService {
           '&hourly=temperature_2m,precipitation_probability,weather_code,is_day'
           '&forecast_days=2&timezone=auto';
 
+      String resolvedLocationName = locationName;
+      if (locationName == 'Current Location' ||
+          locationName == 'My Location' ||
+          locationName == 'Local Weather') {
+        final geo = await reverseGeocodeLocality(lat, lng);
+        if (geo != null && geo.isNotEmpty) {
+          resolvedLocationName = geo;
+        }
+      }
+
       final response = await _dio.get(url);
       if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
         return WeatherModel.fromOpenMeteoJson(
           response.data as Map<String, dynamic>,
-          locationName: locationName,
+          locationName: resolvedLocationName,
         );
       }
     } catch (_) {

@@ -34,6 +34,20 @@ class NavigationStep {
     if (mod.contains('straight')) return Icons.straight;
     return Icons.navigation;
   }
+
+  String get maneuverEmoji {
+    final mod = modifier.toLowerCase();
+    final t = type.toLowerCase();
+    if (t == 'arrive') return '🏁';
+    if (mod.contains('slight left')) return '↖️';
+    if (mod.contains('slight right')) return '↗️';
+    if (mod.contains('sharp left')) return '⬅️';
+    if (mod.contains('sharp right')) return '➡️';
+    if (mod.contains('left')) return '↩️';
+    if (mod.contains('right')) return '↪️';
+    if (mod.contains('uturn') || mod.contains('u-turn')) return '🔄';
+    return '⬆️';
+  }
 }
 
 class RoadRoute {
@@ -121,18 +135,24 @@ class RoutingService {
               final modifier = (maneuver['modifier'] as String?) ?? 'straight';
 
               String instruction;
-              final distStr = HaversineCalculator.formatDistance(stepDist);
+              final distClean = HaversineCalculator.formatDistance(stepDist, includeAway: false);
 
               if (type == 'arrive') {
                 instruction = 'Arriving at destination';
               } else if (type == 'depart') {
-                instruction = name.isNotEmpty ? 'Depart on $name' : 'Head towards destination';
+                instruction = name.isNotEmpty ? 'Head towards $name' : 'Head towards destination';
+              } else if (modifier.contains('slight left')) {
+                instruction = name.isNotEmpty ? 'Bear left onto $name' : 'Bear left';
+              } else if (modifier.contains('slight right')) {
+                instruction = name.isNotEmpty ? 'Bear right onto $name' : 'Bear right';
               } else if (modifier.contains('left')) {
-                instruction = name.isNotEmpty ? 'In $distStr, turn left onto $name' : 'In $distStr, turn left';
+                instruction = name.isNotEmpty ? 'Turn left onto $name' : 'Turn left';
               } else if (modifier.contains('right')) {
-                instruction = name.isNotEmpty ? 'In $distStr, turn right onto $name' : 'In $distStr, turn right';
+                instruction = name.isNotEmpty ? 'Turn right onto $name' : 'Turn right';
+              } else if (modifier.contains('uturn') || modifier.contains('u-turn')) {
+                instruction = 'Make a U-turn';
               } else {
-                instruction = name.isNotEmpty ? 'Continue straight onto $name' : 'Continue straight ($distStr)';
+                instruction = name.isNotEmpty ? 'Continue straight onto $name' : 'Continue straight for $distClean';
               }
 
               steps.add(NavigationStep(

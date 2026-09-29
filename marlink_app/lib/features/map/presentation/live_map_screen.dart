@@ -946,7 +946,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                     children: [
                       Text(
                         step != null
-                            ? 'In ${HaversineCalculator.formatDistance(step.distanceMeters)}'
+                            ? 'In ${HaversineCalculator.formatDistance(step.distanceMeters, includeAway: false)}'
                             : (member != null ? member.displayName : 'Navigation Active'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -958,7 +958,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                       ),
                       Text(
                         step?.instruction ??
-                            (member != null ? 'Tracking $distStr away' : 'Speed $mySpeedKmh km/h'),
+                            (member != null ? 'Tracking $distStr' : 'Speed $mySpeedKmh km/h'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -2329,7 +2329,18 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
 
   void _showWeatherDetailsModal(BuildContext context, WeatherState weatherState) {
     if (PipService.instance.isPipMode.value) return;
-    final weather = weatherState.userWeather ??
+
+    // Immediately trigger fresh live GPS weather fetch if location is available
+    final mapState = ref.read(mapNotifierProvider);
+    if (mapState.myLatLng != null) {
+      ref.read(weatherNotifierProvider.notifier).fetchUserWeather(
+        mapState.myLatLng!.latitude,
+        mapState.myLatLng!.longitude,
+        force: true,
+      );
+    }
+
+    final fallbackWeather = weatherState.userWeather ??
         WeatherModel(
           temperature: 28.0,
           apparentTemperature: 31.0,
@@ -2346,8 +2357,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => WeatherForecastDialog(
-        weather: weather,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
+          final liveWeather = ref.watch(weatherNotifierProvider).userWeather ?? fallbackWeather;
+          return WeatherForecastDialog(weather: liveWeather);
+        },
       ),
     );
   }

@@ -189,7 +189,11 @@ class _WeatherForecastDialogState extends State<WeatherForecastDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Realtime Weather Advisory (Rain, Heat, Clouds, Fair)
+              _buildWeatherAdvisoryBanner(widget.weather, hourly, isDark),
+              const SizedBox(height: 14),
 
               // Zoom Earth-style Hourly Weather Time-Scrubber
               if (hourly.isNotEmpty) ...[
@@ -341,39 +345,110 @@ class _WeatherForecastDialogState extends State<WeatherForecastDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-
-              // Environmental Telemetry Info Banner
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F1A34) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.wb_sunny_outlined, color: AppColors.brandSky, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Live meteorological data powered by Open-Meteo High-Resolution Forecasting.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 6),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWeatherAdvisoryBanner(
+    WeatherModel weather,
+    List<HourlyForecastItem> hourly,
+    bool isDark,
+  ) {
+    // 1. Check if currently raining
+    final isRaining = weather.precipitation > 0 ||
+        (weather.weatherCode >= 51 && weather.weatherCode <= 67) ||
+        (weather.weatherCode >= 80 && weather.weatherCode <= 99);
+
+    // 2. Check for upcoming rain in the next 8 hours
+    final nextRainHour = hourly.take(8).where((h) => h.precipitationProbability >= 40).firstOrNull;
+
+    // 3. Check for high heat
+    final isHeatWarning = weather.apparentTemperature >= 38 || weather.temperature >= 35;
+
+    // 4. Check for cloud cover
+    final isCloudy = weather.weatherCode == 2 || weather.weatherCode == 3;
+
+    final IconData icon;
+    final Color color;
+    final String headline;
+    final String subtitle;
+
+    if (isRaining) {
+      icon = Icons.umbrella_rounded;
+      color = const Color(0xFF38BDF8); // Sky blue
+      headline = 'Active Rain in Your Location';
+      subtitle = weather.precipitation > 0
+          ? '${weather.condition} • ${weather.precipitation.toStringAsFixed(1)} mm precipitation'
+          : '${weather.condition} currently observed';
+    } else if (nextRainHour != null) {
+      icon = Icons.grain_rounded;
+      color = const Color(0xFF60A5FA); // Blue
+      headline = 'Rain Expected Around ${_formatHourLabel(nextRainHour.time)}';
+      subtitle = '${nextRainHour.precipitationProbability}% precipitation probability forecasted';
+    } else if (isHeatWarning) {
+      icon = Icons.warning_amber_rounded;
+      color = const Color(0xFFF97316); // Orange
+      headline = 'High Heat Advisory';
+      subtitle = 'Feels like ${weather.apparentTemperature.round()}°C • Stay hydrated';
+    } else if (isCloudy) {
+      icon = Icons.cloud_queue_rounded;
+      color = const Color(0xFF94A3B8); // Slate
+      headline = 'Overcast / Cloudy Skies';
+      subtitle = '${weather.condition} • Low UV index';
+    } else {
+      icon = Icons.wb_sunny_rounded;
+      color = const Color(0xFFFACC15); // Yellow/Gold
+      headline = 'Clear & Favorable Weather';
+      subtitle = 'Optimal road and outdoor visibility';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.12 : 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  headline,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
