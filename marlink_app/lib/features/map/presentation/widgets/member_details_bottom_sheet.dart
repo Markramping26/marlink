@@ -4,10 +4,12 @@ import '../../../../core/utils/haversine_calculator.dart';
 import '../../../../core/widgets/marlink_avatar.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../domain/models/member_location_model.dart';
+import '../../domain/models/weather_model.dart';
 
 class MemberDetailsBottomSheet extends StatelessWidget {
   final MemberLocationModel member;
   final double? distanceMeters;
+  final WeatherModel? weather;
   final VoidCallback onSendMessage;
   final VoidCallback onSendAlert;
   final VoidCallback onVoiceCall;
@@ -17,6 +19,7 @@ class MemberDetailsBottomSheet extends StatelessWidget {
     super.key,
     required this.member,
     this.distanceMeters,
+    this.weather,
     required this.onSendMessage,
     required this.onSendAlert,
     required this.onVoiceCall,
@@ -167,6 +170,58 @@ class MemberDetailsBottomSheet extends StatelessWidget {
               ],
             ),
           ),
+          if (weather != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurfaceVariant : AppColors.lightSurfaceVariant,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(weather!.weatherIcon, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${weather!.temperature.round()}°C • ${weather!.condition}',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          'Wind ${weather!.windSpeed.toStringAsFixed(1)} km/h • Humidity ${weather!.humidity}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusOnline.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'LIVE',
+                      style: TextStyle(
+                        color: AppColors.statusOnline,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           // Primary GPS Trace & Direction Button
           if (onTraceDirections != null) ...[
             SizedBox(

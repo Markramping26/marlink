@@ -7,8 +7,10 @@ class MapControlsWidget extends StatelessWidget {
   final VoidCallback onZoomOut;
   final VoidCallback? onPip;
   final VoidCallback? onSwitchMapStyle;
+  final VoidCallback? onToggleWeather;
   final bool isSatelliteActive;
   final bool isNavigationFollowActive;
+  final bool isRadarActive;
 
   const MapControlsWidget({
     super.key,
@@ -17,8 +19,10 @@ class MapControlsWidget extends StatelessWidget {
     required this.onZoomOut,
     this.onPip,
     this.onSwitchMapStyle,
+    this.onToggleWeather,
     this.isSatelliteActive = false,
     this.isNavigationFollowActive = false,
+    this.isRadarActive = false,
   });
 
   @override
@@ -52,6 +56,27 @@ class MapControlsWidget extends StatelessWidget {
               ),
               tooltip: 'Map Layer (Satellite / Real Houses)',
               onPressed: onSwitchMapStyle,
+            ),
+            Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          ],
+          if (onToggleWeather != null) ...[
+            Container(
+              decoration: isRadarActive
+                  ? BoxDecoration(
+                      color: AppColors.brandSky.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(12),
+                    )
+                  : null,
+              child: IconButton(
+                icon: Icon(
+                  isRadarActive ? Icons.radar_rounded : Icons.cloud_outlined,
+                  color: isRadarActive
+                      ? AppColors.brandSky
+                      : (isDark ? Colors.white70 : AppColors.brandNavy),
+                ),
+                tooltip: isRadarActive ? 'Live Radar ON (Tap for Forecast)' : 'Live Weather & Zoom Earth Radar',
+                onPressed: onToggleWeather,
+              ),
             ),
             Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
           ],

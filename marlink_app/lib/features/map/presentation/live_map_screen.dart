@@ -21,9 +21,12 @@ import 'package:marlink_app/features/map/providers/tracing_provider.dart';
 import 'package:marlink_app/features/alerts/domain/models/alert_model.dart';
 import 'package:marlink_app/features/alerts/providers/alert_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../domain/models/weather_model.dart';
+import '../providers/weather_provider.dart';
 import 'widgets/map_controls_widget.dart';
 import 'widgets/member_details_bottom_sheet.dart';
 import 'widgets/member_marker_widget.dart';
+import 'widgets/weather_forecast_dialog.dart';
 
 class LiveMapScreen extends ConsumerStatefulWidget {
   final VoidCallback? onNavigateToChat;
@@ -53,6 +56,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     PipService.instance.setAutoPip(true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initInitialFocus();
+      ref.read(weatherNotifierProvider.notifier).loadRadarTilesIfNeeded();
     });
   }
 
@@ -121,12 +125,25 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     final roomState = ref.watch(roomsNotifierProvider);
     final mapState = ref.watch(mapNotifierProvider);
     final tracingState = ref.watch(tracingNotifierProvider);
+    final weatherState = ref.watch(weatherNotifierProvider);
 
     final currentRoom = roomState.currentRoom;
     final sharingStatus = authUser?.profile?.sharingStatus ?? 'on';
     final alertState = ref.watch(alertNotifierProvider);
     final currentUserId = authUser?.id;
     final selfAlert = alertState.activeAlerts.where((a) => a.senderId == currentUserId && a.isActive).firstOrNull;
+
+    // Auto-fetch real-time weather when GPS position is available
+    if (mapState.myLatLng != null && weatherState.userWeather == null && !weatherState.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && mapState.myLatLng != null) {
+          ref.read(weatherNotifierProvider.notifier).fetchUserWeather(
+            mapState.myLatLng!.latitude,
+            mapState.myLatLng!.longitude,
+          );
+        }
+      });
+    }
 
     // Auto-refresh member locations whenever active group changes
     ref.listen<RoomsState>(roomsNotifierProvider, (previous, next) {
@@ -142,6 +159,12 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
 
     // Dynamically update traced member and road route when map updates
     ref.listen<MapState>(mapNotifierProvider, (previous, next) {
+      if (next.myLatLng != null) {
+        ref.read(weatherNotifierProvider.notifier).fetchUserWeather(
+          next.myLatLng!.latitude,
+          next.myLatLng!.longitude,
+        );
+      }
       if (!_hasInitialCentered) {
         if (next.myLatLng != null) {
           _mapController.move(next.myLatLng!, 16.0);
@@ -232,6 +255,19 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 userAgentPackageName: AppConfig.userAgentPackageName,
                 maxZoom: 20,
               ),
+
+              // 1b. Live Zoom Earth-Style Rain & Storm Radar Overlay (RainViewer)
+              if (weatherState.isRadarOverlayActive && weatherState.radarTileUrlTemplate != null)
+                TileLayer(
+                  key: ValueKey(weatherState.radarTileUrlTemplate),
+                  urlTemplate: weatherState.radarTileUrlTemplate!,
+                  userAgentPackageName: AppConfig.userAgentPackageName,
+                  tileBuilder: (context, tileWidget, tile) => Opacity(
+                    opacity: 0.65,
+                    child: tileWidget,
+                  ),
+                  maxZoom: 20,
+                ),
 
               // 2. Tracing Road Polyline between User and Target Member
               if (tracingState.isTracing && mapState.myLatLng != null && tracingState.tracedMember != null)
@@ -476,8 +512,10 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   child: MapControlsWidget(
                     onPip: () => PipService.instance.enterPip(),
                     onSwitchMapStyle: () => _showMapStyleSelectorModal(context),
+                    onToggleWeather: () => _showWeatherDetailsModal(context, weatherState),
                     isSatelliteActive: _selectedMapStyle == 'satellite',
                     isNavigationFollowActive: tracingState.isNavigationFollowMode,
+                    isRadarActive: weatherState.isRadarOverlayActive,
                     onRecenter: () async {
                       if (tracingState.isTracing) {
                         // In tracing mode: toggle between Follow Me and Full Route Overview
@@ -522,12 +560,22 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   ),
                 ),
 
-                // 5b. Floating Realtime Speedometer & Trip Stats (when not in full tracing mode)
+                // 5b. Floating Realtime Speedometer & Live Weather Chip (when not in full tracing mode)
                 if (!tracingState.isTracing)
                   Positioned(
                     left: 16,
                     bottom: 24,
-                    child: _buildFloatingSpeedometer(mapState),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (weatherState.userWeather != null) ...[
+                          _buildWeatherChip(context, weatherState),
+                          const SizedBox(height: 8),
+                        ],
+                        _buildFloatingSpeedometer(mapState),
+                      ],
+                    ),
                   ),
 
                 // 6. Active GPS Tracing HUD Card
@@ -621,6 +669,12 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
 
   void _handleMemberTap(MemberLocationModel member, MapState mapState) {
     ref.read(mapNotifierProvider.notifier).selectMember(member);
+    ref.read(weatherNotifierProvider.notifier).fetchMemberWeather(
+      member.userId,
+      member.latitude,
+      member.longitude,
+      locationName: member.displayName,
+    );
 
     double? distance;
     if (mapState.myLatLng != null) {
@@ -632,6 +686,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       );
     }
 
+    final memberWeather = ref.read(weatherNotifierProvider).memberWeatherMap[member.userId];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -639,6 +695,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       builder: (_) => MemberDetailsBottomSheet(
         member: member,
         distanceMeters: distance,
+        weather: memberWeather,
         onTraceDirections: () {
           Navigator.pop(context);
           _startTracing(member, mapState);
@@ -1898,6 +1955,65 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   title: '⛰️ 3D Terrain & Contours',
                   subtitle: 'Topographic elevation, mountain slopes, and landmarks',
                 ),
+                const SizedBox(height: 14),
+                Divider(height: 1, color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                const SizedBox(height: 14),
+                // Zoom Earth Live Weather Radar Toggle
+                InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    ref.read(weatherNotifierProvider.notifier).toggleRadarOverlay();
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: ref.watch(weatherNotifierProvider).isRadarOverlayActive
+                          ? AppColors.brandSky.withValues(alpha: 0.12)
+                          : (isDark ? const Color(0xFF131F38) : const Color(0xFFF8FAFC)),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: ref.watch(weatherNotifierProvider).isRadarOverlayActive
+                            ? AppColors.brandSky
+                            : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        width: ref.watch(weatherNotifierProvider).isRadarOverlayActive ? 1.8 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.radar_rounded, color: AppColors.brandSky, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '⛈️ Zoom Earth Live Weather Radar',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Real-time rain & storm cloud radar overlay',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          value: ref.watch(weatherNotifierProvider).isRadarOverlayActive,
+                          onChanged: (_) {
+                            ref.read(weatherNotifierProvider.notifier).toggleRadarOverlay();
+                            Navigator.pop(ctx);
+                          },
+                          activeTrackColor: AppColors.brandSky,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2031,5 +2147,105 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         );
       }
     }
+  }
+
+  Widget _buildWeatherChip(BuildContext context, WeatherState weatherState) {
+    final weather = weatherState.userWeather!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _showWeatherDetailsModal(context, weatherState),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: (isDark ? AppColors.darkSurface : AppColors.lightSurface).withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: weatherState.isRadarOverlayActive
+                  ? AppColors.brandSky
+                  : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              width: weatherState.isRadarOverlayActive ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(weather.weatherIcon, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
+              Text(
+                '${weather.temperature.round()}°C',
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '• ${weather.condition}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (weatherState.isRadarOverlayActive) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandSky.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'RADAR',
+                    style: TextStyle(
+                      color: AppColors.brandSky,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showWeatherDetailsModal(BuildContext context, WeatherState weatherState) {
+    final weather = weatherState.userWeather ??
+        WeatherModel(
+          temperature: 28.0,
+          apparentTemperature: 31.0,
+          humidity: 70,
+          windSpeed: 4.5,
+          precipitation: 0.0,
+          weatherCode: 2,
+          isDay: true,
+          locationName: 'Local Weather',
+          timestamp: DateTime.now(),
+        );
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => WeatherForecastDialog(
+        weather: weather,
+        isRadarActive: weatherState.isRadarOverlayActive,
+        onToggleRadar: () {
+          ref.read(weatherNotifierProvider.notifier).toggleRadarOverlay();
+          Navigator.pop(context);
+        },
+      ),
+    );
   }
 }
