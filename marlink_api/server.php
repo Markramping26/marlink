@@ -563,22 +563,211 @@ if (preg_match('#^/uploads/(.+)$#', $uri, $m)) {
     exit;
 }
 
-// Normalize URI (remove trailing slash except root)
-if (strlen($uri) > 1) {
-    $uri = rtrim($uri, '/');
+// Direct APK Download Endpoint
+if ($uri === '/download' || $uri === '/download-apk' || $uri === '/api/v1/download' || $uri === '/MarLink.apk') {
+    $apkFile = __DIR__ . '/MarLink.apk';
+    if (!file_exists($apkFile)) {
+        $apkFile = dirname(__DIR__) . '/MarLink.apk';
+    }
+    if (file_exists($apkFile)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/vnd.android.package-archive');
+        header('Content-Disposition: attachment; filename="MarLink.apk"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($apkFile));
+        readfile($apkFile);
+        exit;
+    } else {
+        respond(false, 'APK file not found on server.', null, null, 404);
+    }
 }
 
 // -------------------------------------------------------------
 // ROUTES
 // -------------------------------------------------------------
 
-// 1. Health & Server Info
+// 1. Health & Server Info / Web Landing Page
 if ($uri === '' || $uri === '/' || $uri === '/api' || $uri === '/api/v1' || $uri === '/api/v1/health') {
+    // If opened directly in a web or mobile browser, present a sleek Download page!
+    if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'text/html') && ($uri === '' || $uri === '/')) {
+        header('Content-Type: text/html; charset=utf-8');
+        echo <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download MarLink - Real-Time GPS & Family Locator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body {
+            background: linear-gradient(180deg, #040A18 0%, #08122B 50%, #030712 100%);
+            color: #FFFFFF;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .glow-orb {
+            position: absolute;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.28) 0%, transparent 70%);
+            top: 15%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .card {
+            background: rgba(15, 27, 53, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 28px;
+            padding: 44px 32px;
+            max-width: 440px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(14, 165, 233, 0.15);
+        }
+        .logo-wrap {
+            margin-bottom: 22px;
+            display: inline-block;
+            filter: drop-shadow(0 12px 28px rgba(14, 165, 233, 0.5));
+        }
+        .logo-img {
+            width: 96px;
+            height: 118px;
+            object-fit: contain;
+        }
+        h1 {
+            font-size: 34px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 6px;
+        }
+        .tagline {
+            color: #94A3B8;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 28px;
+        }
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #0284C7 0%, #0EA5E9 100%);
+            color: #FFFFFF;
+            font-size: 16px;
+            font-weight: 800;
+            text-decoration: none;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.45);
+            transition: all 0.25s ease;
+        }
+        .btn-download:hover, .btn-download:active {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 32px rgba(14, 165, 233, 0.6);
+            background: linear-gradient(135deg, #0369A1 0%, #38BDF8 100%);
+        }
+        .badge {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #64748B;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .badge span {
+            color: #10B981;
+            font-weight: 700;
+        }
+        .features {
+            margin-top: 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding-top: 22px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .feat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #CBD5E1;
+        }
+        .feat-item svg {
+            width: 16px;
+            height: 16px;
+            fill: #38BDF8;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-orb"></div>
+    <div class="card">
+        <div class="logo-wrap">
+            <svg class="logo-img" viewBox="0 0 415 509" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M207.5 0C93.03 0 0 93.03 0 207.5C0 350.2 186.75 494.8 194.8 501.03C198.5 503.88 202.97 505.3 207.5 505.3C212.03 505.3 216.5 503.88 220.2 501.03C228.25 494.8 415 350.2 415 207.5C415 93.03 321.97 0 207.5 0ZM207.5 35C302.76 35 380 112.24 380 207.5C380 318.5 233.8 440.6 207.5 462.1C181.2 440.6 35 318.5 35 207.5C35 112.24 112.24 35 207.5 35Z" fill="url(#pin_grad)"/>
+                <circle cx="207.5" cy="145" r="38" fill="#38BDF8"/>
+                <circle cx="140" cy="255" r="38" fill="#0EA5E9"/>
+                <circle cx="275" cy="255" r="38" fill="#0284C7"/>
+                <path d="M185 160C160 180 150 215 150 225M230 160C255 180 265 215 265 225M170 265C195 275 220 275 245 265" stroke="#38BDF8" stroke-width="12" stroke-linecap="round"/>
+                <defs>
+                    <linearGradient id="pin_grad" x1="0" y1="0" x2="415" y2="509" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#38BDF8"/>
+                        <stop offset="0.5" stop-color="#0EA5E9"/>
+                        <stop offset="1" stop-color="#0284C7"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        <h1>MarLink</h1>
+        <p class="tagline">Connect &bull; Locate &bull; Stay Together</p>
+        <a href="/download" class="btn-download">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download APK (v1.0.0)
+        </a>
+        <div class="badge">
+            <span>&check; Official Release</span> &bull; 57.2 MB &bull; Android 8.0+
+        </div>
+        <div class="features">
+            <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg> Real-time high-precision family GPS tracking</div>
+            <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg> Emergency SOS broadcast & safety alerts</div>
+            <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg> Live circle chat & location pin sharing</div>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+        exit;
+    }
+
     respond(true, 'MarLink Real-Time API Server is Online and Connected to MySQL (marlink_db).', [
-        'version'   => '1.0.0',
-        'app'       => 'MarLink',
-        'database'  => 'marlink_db (Active)',
-        'timestamp' => date('c'),
+        'version'      => '1.0.0',
+        'app'          => 'MarLink',
+        'download_url' => 'https://marlink-api.onrender.com/download',
+        'database'     => 'marlink_db (Active)',
+        'timestamp'    => date('c'),
     ]);
 }
 

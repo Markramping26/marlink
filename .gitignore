@@ -4,6 +4,7 @@
 **/.pub-cache/
 **/.pub/
 *.apk
+!marlink_api/MarLink.apk
 
 # PHP / Composer
 marlink_api/composer.phar
