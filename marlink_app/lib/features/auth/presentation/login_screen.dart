@@ -141,82 +141,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // App Brand Icon with Glow Shadow
-                        Container(
-                          width: 68,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF0EA5E9).withValues(alpha: 0.40),
-                                blurRadius: 22,
-                                offset: const Offset(0, 8),
+                        // App Brand Icon with Soft Radial Aura (No double container!)
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 62,
+                              height: 62,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.42),
+                                    blurRadius: 32,
+                                    spreadRadius: 6,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
+                            ),
+                            Image.asset(
                               'assets/images/app_logo.png',
-                              fit: BoxFit.cover,
+                              width: 74,
+                              height: 74,
+                              fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) => const Center(
                                 child: Icon(
-                                  Icons.shield_outlined,
-                                  color: Colors.white,
-                                  size: 34,
+                                  Icons.share_location_rounded,
+                                  color: AppColors.brandSky,
+                                  size: 40,
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
 
-                        // Brand Title
+                        // Brand Title & Tagline
                         const Text(
                           'MarLink',
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: 30,
                             fontWeight: FontWeight.w900,
-                            letterSpacing: -0.8,
+                            letterSpacing: -0.9,
                           ),
                         ),
-                        const SizedBox(height: 6),
-
-                        // Security Network Pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.25),
-                              width: 1,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.lock_rounded, size: 11, color: Color(0xFF38BDF8)),
-                              SizedBox(width: 5),
-                              Text(
-                                'REAL-TIME FAMILY GPS NETWORK',
-                                style: TextStyle(
-                                  color: Color(0xFF38BDF8),
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.6,
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 4),
+                        Text(
+                          'Connect  •  Locate  •  Stay Together',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            letterSpacing: 0.3,
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
 
                         // Error Banner if login fails
                         if (_localError != null) ...[
@@ -278,18 +257,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Sign In to Your Account',
+                                'Sign In',
                                 style: TextStyle(
-                                  fontSize: 19,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.4,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Enter your credentials to connect with your group',
+                                'Enter your credentials to access your circle',
                                 style: TextStyle(
-                                  fontSize: 12.5,
+                                  fontSize: 13,
                                   color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 ),
                               ),
@@ -299,7 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               MarLinkTextField(
                                 controller: _loginController,
                                 label: 'Email or Username',
-                                hint: 'Enter your email or username',
+                                hint: 'Username or email address',
                                 prefixIcon: Icons.alternate_email_rounded,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (val) {

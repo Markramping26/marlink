@@ -50,13 +50,13 @@ class _MarLinkTextFieldState extends State<MarLinkTextField> {
         Text(
           widget.label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 12.5,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.1,
             color: isDark ? const Color(0xFF94A3B8) : AppColors.lightTextSecondary,
           ),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 6),
         TextFormField(
           controller: widget.controller,
           obscureText: widget.isPassword ? _obscureText : false,
@@ -65,21 +65,21 @@ class _MarLinkTextFieldState extends State<MarLinkTextField> {
           onChanged: widget.onChanged,
           enabled: widget.enabled,
           maxLines: widget.isPassword ? 1 : widget.maxLines,
-          style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w500),
+          style: TextStyle(color: textColor, fontSize: 14.5, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: TextStyle(color: hintColor, fontSize: 14),
+            hintStyle: TextStyle(color: hintColor, fontSize: 13.5),
             filled: true,
             fillColor: fillColor,
             prefixIcon: widget.prefixIcon != null
-                ? Icon(widget.prefixIcon, color: isDark ? const Color(0xFF38BDF8).withValues(alpha: 0.7) : hintColor, size: 20)
+                ? Icon(widget.prefixIcon, color: isDark ? const Color(0xFF38BDF8).withValues(alpha: 0.7) : hintColor, size: 19)
                 : null,
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
                       _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       color: hintColor,
-                      size: 20,
+                      size: 19,
                     ),
                     onPressed: () {
                       setState(() {
@@ -88,7 +88,7 @@ class _MarLinkTextFieldState extends State<MarLinkTextField> {
                     },
                   )
                 : null,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13.5),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: borderColor, width: 1.2),

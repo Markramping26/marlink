@@ -152,46 +152,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
               // Scrollable Content
               SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  22,
+                  8,
+                  22,
+                  MediaQuery.of(context).padding.bottom + 48,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Badge
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFF0EA5E9).withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.verified_user_outlined, size: 14, color: Color(0xFF38BDF8)),
-                                SizedBox(width: 6),
-                                Text(
-                                  'NEW ACCOUNT',
-                                  style: TextStyle(
-                                    color: Color(0xFF38BDF8),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
+                      const SizedBox(height: 8),
                       const Text(
                         'Create Account',
                         style: TextStyle(
@@ -202,14 +175,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Join MarLink to connect with loved ones, share real-time GPS coordinates, and stay protected.',
+                        'Join MarLink to connect and share live locations with your circle.',
                         style: TextStyle(
                           fontSize: 14,
                           height: 1.4,
                           color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
                       if (_localError != null) ...[
                         Container(
@@ -239,7 +212,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 18),
                       ],
 
                       // Card Form Container
@@ -247,9 +220,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? const Color(0xFF0F1A34).withValues(alpha: 0.75)
-                              : Colors.white.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
+                              ? const Color(0xFF0F1A34).withValues(alpha: 0.80)
+                              : Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(22),
                           border: Border.all(
                             color: isDark ? const Color(0xFF1E2F54) : const Color(0xFFE2E8F0),
                             width: 1.2,
@@ -257,7 +230,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                              blurRadius: 18,
+                              blurRadius: 20,
                               offset: const Offset(0, 6),
                             ),
                           ],
@@ -268,14 +241,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             MarLinkTextField(
                               controller: _nameController,
                               label: 'Full Name',
-                              hint: 'Enter your full name',
+                              hint: 'Your full name',
                               prefixIcon: Icons.badge_outlined,
                               validator: (val) {
                                 if (val == null || val.trim().isEmpty) return 'Full name is required.';
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             MarLinkTextField(
                               controller: _usernameController,
@@ -288,12 +261,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             MarLinkTextField(
                               controller: _emailController,
                               label: 'Email Address',
-                              hint: 'Enter your email address',
+                              hint: 'name@example.com',
                               prefixIcon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
                               validator: (val) {
@@ -302,21 +275,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             MarLinkTextField(
                               controller: _phoneController,
                               label: 'Phone Number (Optional)',
-                              hint: 'Enter your mobile number (optional)',
+                              hint: 'Mobile number (optional)',
                               prefixIcon: Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             MarLinkTextField(
                               controller: _passwordController,
                               label: 'Password',
-                              hint: 'Create password (min. 8 characters)',
+                              hint: 'At least 8 characters',
                               prefixIcon: Icons.lock_outline_rounded,
                               isPassword: true,
                               validator: (val) {
@@ -325,12 +298,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
 
                             MarLinkTextField(
                               controller: _confirmPasswordController,
                               label: 'Confirm Password',
-                              hint: 'Re-enter your password to confirm',
+                              hint: 'Re-enter your password',
                               prefixIcon: Icons.lock_clock_outlined,
                               isPassword: true,
                               validator: (val) {
@@ -341,16 +314,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 22),
 
                       // Submit Button
                       MarLinkButton(
-                        text: 'Create My Account',
+                        text: 'Create Account',
                         icon: Icons.person_add_alt_1_rounded,
                         onPressed: _handleRegister,
                         isLoading: authState.isLoading,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 14),
+
+                      // Trust & Safety Note
+                      Center(
+                        child: Text(
+                          'By creating an account, you agree to secure location sharing with your group.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
 
                       // Footer
                       Center(
@@ -379,7 +366,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
