@@ -44,9 +44,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
       return true;
     } on ApiException catch (e) {
+      final msg = e.statusCode == 401
+          ? (e.message.isNotEmpty &&
+                  !e.message.toLowerCase().contains('unauthenticated') &&
+                  !e.message.toLowerCase().contains('token') &&
+                  !e.message.toLowerCase().contains('session')
+              ? e.message
+              : 'Invalid email/username or password. Please try again.')
+          : e.friendlyErrorMessage;
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.friendlyErrorMessage,
+        errorMessage: msg,
       );
       return false;
     } catch (e) {

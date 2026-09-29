@@ -16,11 +16,11 @@ class ApiException implements Exception {
     if (statusCode == 401) {
       if (message.isNotEmpty &&
           !message.toLowerCase().contains('unauthenticated') &&
-          !message.toLowerCase().contains('token expired') &&
-          !message.toLowerCase().contains('cannot reach server')) {
+          !message.toLowerCase().contains('token') &&
+          !message.toLowerCase().contains('session')) {
         return message;
       }
-      return 'Session expired. Please log in again.';
+      return 'Invalid email/username or password. Please try again.';
     } else if (statusCode == 403) {
       return 'Access denied. You do not have permission for this action.';
     } else if (statusCode == 404) {

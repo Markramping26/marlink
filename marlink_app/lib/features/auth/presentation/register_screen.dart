@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/config/app_config.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/marlink_button.dart';
 import '../../../../core/widgets/marlink_text_field.dart';
 import '../../home/presentation/main_navigation_screen.dart';
 import '../providers/auth_provider.dart';
-import 'widgets/server_config_dialog.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -89,6 +87,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
+
       ),
       body: Container(
         width: double.infinity,
@@ -204,43 +203,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               width: 1.2,
                             ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.error_outline_rounded, color: AppColors.alertEmergency, size: 20),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      _localError!,
-                                      style: const TextStyle(
-                                        color: AppColors.alertEmergency,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: () => ServerConfigDialog.show(
-                                    context,
-                                    onConfigSaved: () => setState(() => _localError = null),
-                                  ),
-                                  icon: const Icon(Icons.settings_ethernet_rounded, size: 14),
-                                  label: const Text(
-                                    'Change Server IP',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                                  ),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    foregroundColor: AppColors.brandSky,
+                              const Icon(Icons.error_outline_rounded, color: AppColors.alertEmergency, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _localError!,
+                                  style: const TextStyle(
+                                    color: AppColors.alertEmergency,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),

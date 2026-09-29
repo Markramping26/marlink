@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/config/app_config.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/marlink_button.dart';
 import '../../../../core/widgets/marlink_text_field.dart';
 import '../../home/presentation/main_navigation_screen.dart';
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
-import 'widgets/server_config_dialog.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -113,6 +111,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
+
+
 
               // 2. Main Scrollable Content
               Center(
@@ -225,47 +225,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 width: 1.2,
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.error_outline_rounded,
-                                      color: AppColors.alertEmergency,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        _localError!,
-                                        style: const TextStyle(
-                                          color: AppColors.alertEmergency,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: AppColors.alertEmergency,
+                                  size: 20,
                                 ),
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton.icon(
-                                    onPressed: () => ServerConfigDialog.show(
-                                      context,
-                                      onConfigSaved: () => setState(() => _localError = null),
-                                    ),
-                                    icon: const Icon(Icons.settings_ethernet_rounded, size: 14),
-                                    label: const Text(
-                                      'Change Server IP',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                                    ),
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      foregroundColor: AppColors.brandSky,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _localError!,
+                                    style: const TextStyle(
+                                      color: AppColors.alertEmergency,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
@@ -365,25 +339,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Security Trust Badge
-                        Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.shield_outlined, size: 14, color: AppColors.statusOnline),
-                              const SizedBox(width: 6),
-                              Text(
-                                'End-to-End Encrypted Location & Rooms',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 36),
+
 
                         // Footer: Register Link
                         Center(
@@ -418,34 +374,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Server Host Footer Link
-                        Center(
-                          child: GestureDetector(
-                            onTap: () => ServerConfigDialog.show(context, onConfigSaved: () => setState(() {})),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: (isDark ? AppColors.darkSurface : AppColors.lightSurface).withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.wifi_rounded, size: 12, color: AppColors.brandSky),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    'Server: ${AppConfig.serverAddress} · Change IP',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+
                       ],
                     ),
                   ),

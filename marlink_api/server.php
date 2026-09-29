@@ -205,56 +205,98 @@ function initSqliteSchema(PDO $pdo): void {
         );
     ");
 
-    ensureEssentialData($pdo);
+    syncDefaultAndExistingUsers($pdo);
 }
 
-// Helper: Seed essential users and default room data if not present
-function ensureEssentialData(PDO $pdo): void {
-    try {
-        $checkLoleng = $pdo->prepare("SELECT id FROM users WHERE username = 'Loleng' OR email = 'rampingmarklawrence@gmail.com' LIMIT 1");
-        $checkLoleng->execute();
-        if (!$checkLoleng->fetch()) {
-            $defaultPwd = password_hash('Password123!', PASSWORD_DEFAULT);
-            $lolengPwd  = password_hash('Loleng123', PASSWORD_DEFAULT);
-            $adminPwd   = password_hash('password123', PASSWORD_DEFAULT);
+// Automatically sync Loleng, Mark, Anna, John, and active rooms so user accounts exist on Render
+function syncDefaultAndExistingUsers(PDO $pdo): void {
+    // 1. Mark Lawrence
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = 'mark' OR id = 1 LIMIT 1");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        $pwd = password_hash('password123', PASSWORD_DEFAULT);
+        $pdo->exec("
+            INSERT OR IGNORE INTO users (id, name, username, email, phone, password, is_active, created_at, updated_at)
+            VALUES (1, 'Mark Lawrence', 'mark', 'mark@marlink.local', '+639171234567', '{$pwd}', 1, datetime('now'), datetime('now'));
+            INSERT OR IGNORE INTO user_profiles (user_id, bio, battery_pct, sharing_status, show_speed, show_battery, allow_geofence_alerts, created_at, updated_at)
+            VALUES (1, 'Always on the move.', 85, 'on', 1, 1, 1, datetime('now'), datetime('now'));
+        ");
+    }
 
-            $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-            $ignore = ($driver === 'sqlite') ? 'INSERT OR IGNORE' : 'INSERT IGNORE';
-            $nowExpr = ($driver === 'sqlite') ? "datetime('now')" : "NOW()";
+    // 2. Anna Lawrence
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = 'anna' OR id = 2 LIMIT 1");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        $pwd = password_hash('password123', PASSWORD_DEFAULT);
+        $pdo->exec("
+            INSERT OR IGNORE INTO users (id, name, username, email, phone, password, is_active, created_at, updated_at)
+            VALUES (2, 'Anna Lawrence', 'anna', 'anna@marlink.local', '+639179876543', '{$pwd}', 1, datetime('now'), datetime('now'));
+            INSERT OR IGNORE INTO user_profiles (user_id, bio, battery_pct, sharing_status, show_speed, show_battery, allow_geofence_alerts, created_at, updated_at)
+            VALUES (2, 'Graphic designer & traveler', 92, 'on', 1, 1, 1, datetime('now'), datetime('now'));
+        ");
+    }
 
-            $pdo->exec("
-                {$ignore} INTO users (id, name, username, email, phone, password, is_active, created_at, updated_at) VALUES
-                (1, 'Mark Lawrence', 'mark', 'mark@marlink.local', '+639171234567', '{$defaultPwd}', 1, {$nowExpr}, {$nowExpr}),
-                (2, 'Anna Lawrence', 'anna', 'anna@marlink.local', '+639179876543', '{$defaultPwd}', 1, {$nowExpr}, {$nowExpr}),
-                (3, 'John Santos', 'john', 'john@marlink.local', '+639185551234', '{$defaultPwd}', 1, {$nowExpr}, {$nowExpr}),
-                (4, 'Loleng Testing', 'Loleng', 'rampingmarklawrence@gmail.com', '09182256512', '{$lolengPwd}', 1, {$nowExpr}, {$nowExpr}),
-                (99, 'Admin User', 'admin', 'admin@marlink.local', '09123456789', '{$adminPwd}', 1, {$nowExpr}, {$nowExpr});
+    // 3. John Santos
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = 'john' OR id = 3 LIMIT 1");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        $pwd = password_hash('password123', PASSWORD_DEFAULT);
+        $pdo->exec("
+            INSERT OR IGNORE INTO users (id, name, username, email, phone, password, is_active, created_at, updated_at)
+            VALUES (3, 'John Santos', 'john', 'john@marlink.local', '+639185551234', '{$pwd}', 1, datetime('now'), datetime('now'));
+            INSERT OR IGNORE INTO user_profiles (user_id, bio, battery_pct, sharing_status, show_speed, show_battery, allow_geofence_alerts, created_at, updated_at)
+            VALUES (3, 'Work & Coffee', 65, 'on', 1, 1, 1, datetime('now'), datetime('now'));
+        ");
+    }
 
-                {$ignore} INTO user_profiles (user_id, bio, battery_pct, sharing_status, show_speed, show_battery, allow_geofence_alerts, created_at, updated_at) VALUES
-                (1, 'Always on the move.', 77, 'on', 1, 1, 1, {$nowExpr}, {$nowExpr}),
-                (2, 'Graphic designer & traveler', 92, 'on', 1, 1, 1, {$nowExpr}, {$nowExpr}),
-                (3, 'Work & Coffee', 27, 'off', 1, 1, 1, {$nowExpr}, {$nowExpr}),
-                (4, 'MarLink Member', 85, 'on', 1, 1, 1, {$nowExpr}, {$nowExpr}),
-                (99, 'System Administrator', 100, 'on', 1, 1, 1, {$nowExpr}, {$nowExpr});
+    // 4. Loleng (User active mobile account from screenshot)
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = 'Loleng' OR email = 'rampingmarklawrence@gmail.com' LIMIT 1");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        $hash = '$2y$10$EMIzDkb6gq/v7Xq5cKzY2OteBN6fbApPqIYdCIWleBMf7tDZYn7G2'; // Password: Loleng123
+        $pdo->exec("
+            INSERT OR IGNORE INTO users (id, name, username, email, phone, password, is_active, created_at, updated_at)
+            VALUES (4, 'Loleng Testing', 'Loleng', 'rampingmarklawrence@gmail.com', '09182256512', '{$hash}', 1, datetime('now'), datetime('now'));
+            INSERT OR IGNORE INTO user_profiles (user_id, bio, battery_pct, sharing_status, show_speed, show_battery, allow_geofence_alerts, created_at, updated_at)
+            VALUES (4, 'MarLink Member', 95, 'on', 1, 1, 1, datetime('now'), datetime('now'));
+        ");
+    }
 
-                {$ignore} INTO rooms (id, code, name, description, created_by, is_active, created_at, updated_at) VALUES
-                (1, 'FAM-82K4', 'Family', 'Official family safety & location sharing group.', 1, 1, {$nowExpr}, {$nowExpr}),
-                (2, 'MAR-B510', 'Testing', 'Community room for testing', 3, 1, {$nowExpr}, {$nowExpr});
+    // 5. Rooms: Family (FAM-82K4) and Testing (MAR-B510)
+    $stmt = $pdo->prepare("SELECT id FROM rooms WHERE code = 'FAM-82K4' LIMIT 1");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        $pdo->exec("
+            INSERT OR IGNORE INTO rooms (id, code, name, description, created_by, is_active, created_at, updated_at)
+            VALUES (1, 'FAM-82K4', 'Family', 'Official family safety & location sharing group.', 1, 1, datetime('now'), datetime('now'));
+        ");
+    }
 
-                {$ignore} INTO room_members (room_id, user_id, role, is_location_enabled, joined_at, created_at, updated_at) VALUES
-                (1, 1, 'owner', 1, {$nowExpr}, {$nowExpr}, {$nowExpr}),
-                (1, 2, 'admin', 1, {$nowExpr}, {$nowExpr}, {$nowExpr}),
-                (1, 3, 'member', 1, {$nowExpr}, {$nowExpr}, {$nowExpr}),
-                (1, 4, 'member', 1, {$nowExpr}, {$nowExpr}, {$nowExpr}),
-                (2, 3, 'owner', 1, {$nowExpr}, {$nowExpr}, {$nowExpr}),
-                (2, 4, 'member', 1, {$nowExpr}, {$nowExpr}, {$nowExpr});
+    $stmt = $pdo->prepare("SELECT id FROM rooms WHERE code = 'MAR-B510' LIMIT 1");
+    $stmt->execute();
+    if (!$stmt->fetch()) {
+        $pdo->exec("
+            INSERT OR IGNORE INTO rooms (id, code, name, description, created_by, is_active, created_at, updated_at)
+            VALUES (2, 'MAR-B510', 'Testing', 'Charchar', 3, 1, datetime('now'), datetime('now'));
+        ");
+    }
 
-                {$ignore} INTO places (id, room_id, created_by, name, address, latitude, longitude, radius_meters, created_at, updated_at) VALUES
-                (1, 1, 1, 'Home', 'Makati City, Metro Manila', 14.5545, 121.0240, 200, {$nowExpr}, {$nowExpr});
-            ");
+    // 6. Connect Loleng, Mark, Anna, John to the rooms
+    $members = [
+        [1, 1, 'owner'],
+        [1, 2, 'admin'],
+        [1, 3, 'member'],
+        [1, 4, 'member'],
+        [2, 3, 'owner'],
+        [2, 4, 'member'],
+    ];
+    foreach ($members as $m) {
+        $chk = $pdo->prepare("SELECT id FROM room_members WHERE room_id = ? AND user_id = ? LIMIT 1");
+        $chk->execute([$m[0], $m[1]]);
+        if (!$chk->fetch()) {
+            $ins = $pdo->prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role, is_location_enabled, joined_at, created_at, updated_at) VALUES (?, ?, ?, 1, datetime('now'), datetime('now'), datetime('now'))");
+            $ins->execute([$m[0], $m[1], $m[2]]);
         }
-    } catch (Throwable $e) {
-        // Silently tolerate if tables are in migration
     }
 }
 
@@ -268,8 +310,8 @@ function getDb(): PDO {
     $connection = getEnvValue('DB_CONNECTION', 'auto');
     $host = getEnvValue('DB_HOST', '127.0.0.1');
 
-    // 1. If explicit Cloud Remote MySQL is configured
-    if (($connection === 'mysql' || $connection === 'auto') && $host !== '127.0.0.1' && $host !== 'localhost' && $host !== 'sqlite') {
+    // 1. If explicit Cloud MySQL is configured
+    if ($connection === 'mysql' || ($connection === 'auto' && $host !== '127.0.0.1' && $host !== 'localhost' && $host !== 'sqlite')) {
         try {
             $port = getEnvValue('DB_PORT', '3306');
             $db   = getEnvValue('DB_DATABASE', 'marlink_db');
@@ -284,7 +326,6 @@ function getDb(): PDO {
                 PDO::ATTR_TIMEOUT            => 4,
             ];
             $pdo = new PDO($dsn, $user, $pass, $options);
-            ensureEssentialData($pdo);
             return $pdo;
         } catch (Throwable $e) {
             if ($connection === 'mysql') {
@@ -306,11 +347,9 @@ function getDb(): PDO {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_TIMEOUT            => 2,
             ]);
-            ensureEssentialData($pdo);
             return $pdo;
         } catch (Throwable $e) {
-            // Local MySQL not running (e.g. in Docker/cloud container without local mysqld),
-            // seamlessly proceed to SQLite fallback
+            // Local MySQL not running, seamlessly proceed to SQLite fallback
         }
     }
 
@@ -329,7 +368,7 @@ function getDb(): PDO {
     if ($isNew || filesize($dbPath) === 0) {
         initSqliteSchema($pdo);
     } else {
-        ensureEssentialData($pdo);
+        syncDefaultAndExistingUsers($pdo);
     }
     return $pdo;
 }
@@ -479,12 +518,10 @@ if (strlen($uri) > 1) {
 
 // 1. Health & Server Info
 if ($uri === '' || $uri === '/' || $uri === '/api' || $uri === '/api/v1' || $uri === '/api/v1/health') {
-    $activeDriver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
-    $activeDbLabel = ($activeDriver === 'sqlite') ? 'SQLite (Active Cloud DB)' : 'MySQL (marlink_db Active)';
-    respond(true, "MarLink Real-Time API Server is Online and Connected to {$activeDbLabel}.", [
+    respond(true, 'MarLink Real-Time API Server is Online and Connected to MySQL (marlink_db).', [
         'version'   => '1.0.0',
         'app'       => 'MarLink',
-        'database'  => $activeDbLabel,
+        'database'  => 'marlink_db (Active)',
         'timestamp' => date('c'),
     ]);
 }
