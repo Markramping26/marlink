@@ -5,9 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/widgets/marlink_avatar.dart';
 import 'package:marlink_app/core/widgets/status_badge.dart';
+import 'package:marlink_app/core/config/app_config.dart';
 import 'package:marlink_app/features/auth/presentation/login_screen.dart';
 import 'package:marlink_app/features/auth/providers/auth_provider.dart';
 import 'package:marlink_app/features/map/providers/location_provider.dart';
+import 'package:marlink_app/features/profile/data/app_update_service.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -19,6 +21,130 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isUploadingAvatar = false;
   final ImagePicker _picker = ImagePicker();
+
+  AppUpdateInfo? _updateInfo;
+  bool _isCheckingUpdate = false;
+  bool _hasCheckedUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdates(silent: true);
+    });
+  }
+
+  Future<void> _checkForUpdates({bool silent = false}) async {
+    if (_isCheckingUpdate) return;
+    setState(() => _isCheckingUpdate = true);
+    try {
+      final info = await ref.read(appUpdateServiceProvider).checkUpdate();
+      if (mounted) {
+        setState(() {
+          _updateInfo = info;
+          _hasCheckedUpdate = true;
+          _isCheckingUpdate = false;
+        });
+
+        if (!silent) {
+          if (info != null && info.isUpdateAvailable) {
+            _showUpdateDialog(info);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('You are using the latest version of MarLink! (v${AppConfig.appVersion})'),
+                backgroundColor: AppColors.statusOnline,
+              ),
+            );
+          }
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isCheckingUpdate = false;
+          _hasCheckedUpdate = true;
+        });
+        if (!silent) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot check for updates. Please verify your internet connection.'),
+              backgroundColor: AppColors.alertEmergency,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _startUpdateDownload(AppUpdateInfo info) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Starting download of MarLink update...'),
+        backgroundColor: AppColors.brandBlue,
+      ),
+    );
+    final success = await AppUpdateService.launchDownload(info.downloadUrl);
+    if (!success && mounted) {
+      await AppUpdateService.launchDownload(info.fallbackUrl);
+    }
+  }
+
+  void _showUpdateDialog(AppUpdateInfo info) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.system_update_rounded, color: AppColors.brandBlue),
+            const SizedBox(width: 10),
+            Text('Update Available (v${info.latestVersion})'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'A new version of MarLink is available! Here is what is new:',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                info.releaseNotes,
+                style: const TextStyle(fontSize: 13, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Later'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _startUpdateDownload(info);
+            },
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: const Text('Update Now'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brandBlue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _pickAvatar(ImageSource source) async {
     Navigator.pop(context); // Close bottom sheet
@@ -454,10 +580,185 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 }
               },
             ),
+            const SizedBox(height: 20),
+
+            // App Updates & Version Section
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: (_updateInfo != null && _updateInfo!.isUpdateAvailable)
+                      ? AppColors.brandBlue
+                      : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                  width: (_updateInfo != null && _updateInfo!.isUpdateAvailable) ? 1.5 : 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandBlue.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.system_update_rounded,
+                              color: AppColors.brandBlue,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'App Updates',
+                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                              ),
+                              Text(
+                                'Installed: v${AppConfig.appVersion}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      if (_updateInfo != null && _updateInfo!.isUpdateAvailable)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.statusOnline.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.statusOnline, width: 1),
+                          ),
+                          child: const Text(
+                            'NEW UPDATE',
+                            style: TextStyle(
+                              color: AppColors.statusOnline,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        )
+                      else if (_hasCheckedUpdate)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green, size: 14),
+                              SizedBox(width: 4),
+                              Text(
+                                'Up to date',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (_updateInfo != null && _updateInfo!.isUpdateAvailable) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandBlue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.brandBlue.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.new_releases_rounded, color: AppColors.brandBlue, size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                'v${_updateInfo!.latestVersion} Available',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _updateInfo!.releaseNotes,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _startUpdateDownload(_updateInfo!),
+                        icon: const Icon(Icons.download_rounded, size: 18),
+                        label: Text('Update Now (v${_updateInfo!.latestVersion})'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.brandBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 1,
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isCheckingUpdate ? null : () => _checkForUpdates(silent: false),
+                        icon: _isCheckingUpdate
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh_rounded, size: 16),
+                        label: Text(_isCheckingUpdate ? 'Checking server...' : 'Check for Updates'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isDark ? Colors.white : Colors.black87,
+                          side: BorderSide(
+                            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 30),
 
             Text(
-              'MarLink v1.0.0 · Connect. Locate. Stay Together.',
+              'MarLink v${AppConfig.appVersion} · Connect. Locate. Stay Together.',
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,

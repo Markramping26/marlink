@@ -24,6 +24,7 @@ dependencies:
   web_socket_channel: ^3.0.3
   cupertino_icons: ^1.0.6
   camera: ^0.12.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

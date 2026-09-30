@@ -36,4 +36,7 @@ class ApiEndpoints {
   static String callJoin(int callId) => '/calls/$callId/join';
   static String callDecline(int callId) => '/calls/$callId/decline';
   static String callEnd(int callId) => '/calls/$callId/end';
+
+  // App Update
+  static const String appVersion = '/app/version';
 }

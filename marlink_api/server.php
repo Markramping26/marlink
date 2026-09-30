@@ -597,6 +597,19 @@ if ($uri === '/logo.png') {
     }
 }
 
+// App Version & Update Check Endpoint
+if ($uri === '/api/v1/app/version' || $uri === '/api/v1/version' || $uri === '/version') {
+    respond(true, 'Latest app version information.', [
+        'latest_version' => '1.0.0',
+        'build_number'   => 1,
+        'release_notes'  => 'Official Release • High-precision GPS family tracking, SOS emergency alerts, and live circle chat.',
+        'download_url'   => 'https://github.com/Markramping26/marlink/raw/main/marlink_api/MarLink.apk',
+        'fallback_url'   => 'https://marlink-api.onrender.com/download',
+        'is_mandatory'   => false,
+        'release_date'   => '2026-09-30',
+    ]);
+}
+
 // -------------------------------------------------------------
 // ROUTES
 // -------------------------------------------------------------
