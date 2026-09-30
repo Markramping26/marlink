@@ -844,10 +844,10 @@ if ($uri === '' || $uri === '/' || $uri === '/api' || $uri === '/api/v1' || $uri
         <p class="tagline">Connect &bull; Locate &bull; Stay Together</p>
         <a href="/download" class="btn-download">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download APK (v1.0.0)
+            Download APK (v1.0.1)
         </a>
         <div class="badge">
-            <span>&check; Official Release</span> &bull; 57.2 MB &bull; Android 8.0+
+            <span>&check; Official Release</span> &bull; 60.2 MB &bull; Android 8.0+
         </div>
         <div class="features">
             <div class="feat-item"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg> Real-time high-precision family GPS tracking</div>
@@ -862,7 +862,7 @@ HTML;
     }
 
     respond(true, 'MarLink Real-Time API Server is Online and Connected to MySQL (marlink_db).', [
-        'version'      => '1.0.0',
+        'version'      => '1.0.1',
         'app'          => 'MarLink',
         'download_url' => 'https://marlink-api.onrender.com/download',
         'database'     => 'marlink_db (Active)',

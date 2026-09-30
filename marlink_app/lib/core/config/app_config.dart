@@ -82,8 +82,8 @@ class AppConfig {
 
   static const String appName = 'MarLink';
   static const String appTagline = 'Connect. Locate. Stay Together.';
-  static const String appVersion = '1.0.0';
-  static const int appBuildNumber = 1;
+  static const String appVersion = '1.0.1';
+  static const int appBuildNumber = 2;
 
   // Tile Servers for Map Layers
   static const String osmTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';

@@ -16,15 +16,18 @@ Write-Host "=== FLUTTER DOCTOR STATUS ==="
 Write-Host "=== STARTING APK BUILD ==="
 Set-Location "c:\AndriodStudioProjects\marlink\marlink_app"
 & "$flutterBin\flutter.bat" pub get
-& "$flutterBin\flutter.bat" build apk --debug
+& "$flutterBin\flutter.bat" build apk --release
 
-if (Test-Path "c:\AndriodStudioProjects\marlink\marlink_app\build\app\outputs\flutter-apk\app-debug.apk") {
-    $apkPath = "c:\AndriodStudioProjects\marlink\marlink_app\build\app\outputs\flutter-apk\app-debug.apk"
+if (Test-Path "c:\AndriodStudioProjects\marlink\marlink_app\build\app\outputs\flutter-apk\app-release.apk") {
+    $apkPath = "c:\AndriodStudioProjects\marlink\marlink_app\build\app\outputs\flutter-apk\app-release.apk"
     $sizeMb = [math]::Round(((Get-Item $apkPath).Length / 1MB), 2)
     $targetApk = "c:\AndriodStudioProjects\marlink\MarLink.apk"
+    $apiApk = "c:\AndriodStudioProjects\marlink\marlink_api\MarLink.apk"
     Copy-Item -Path $apkPath -Destination $targetApk -Force
+    Copy-Item -Path $apkPath -Destination $apiApk -Force
     Write-Host "=== SUCCESS: APK BUILT & COPIED SUCCESSFULLY! ==="
     Write-Host "Root APK: $targetApk"
+    Write-Host "API APK: $apiApk"
     Write-Host "APK File Size: $sizeMb MB"
 } else {
     Write-Host "=== APK build completed. Checking output directory ==="

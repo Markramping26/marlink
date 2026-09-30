@@ -5,6 +5,7 @@ services:
     plan: free
     region: singapore
     branch: main
+    autoDeploy: true
     dockerfilePath: ./Dockerfile
     envVars:
       - key: PORT

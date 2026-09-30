@@ -1,7 +1,7 @@
 name: marlink_app
 description: "MarLink - Connect. Locate. Stay Together. Real-Time Location Sharing, Communication & Safety Application"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
