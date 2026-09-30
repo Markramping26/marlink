@@ -117,18 +117,23 @@ class RoomsNotifier extends StateNotifier<RoomsState> {
     }
   }
 
-  Future<void> leaveRoom(int roomId) async {
+  Future<bool> leaveRoom(int roomId) async {
     try {
       await _repository.leaveRoom(roomId);
       final updated = state.rooms.where((r) => r.id != roomId).toList();
       state = state.copyWith(
         rooms: updated,
-        currentRoom: updated.isNotEmpty ? updated.first : null,
+        currentRoom: (state.currentRoom?.id == roomId)
+            ? (updated.isNotEmpty ? updated.first : null)
+            : state.currentRoom,
       );
-    } catch (_) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
-  Future<void> removeMember(int roomId, int userId) async {
+  Future<bool> removeMember(int roomId, int userId) async {
     try {
       await _repository.removeMember(roomId, userId);
       // Reload room details
@@ -138,6 +143,9 @@ class RoomsNotifier extends StateNotifier<RoomsState> {
         rooms: updatedRooms,
         currentRoom: state.currentRoom?.id == roomId ? updatedRoom : state.currentRoom,
       );
-    } catch (_) {}
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 }

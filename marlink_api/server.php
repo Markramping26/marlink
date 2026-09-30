@@ -356,6 +356,63 @@ function syncDefaultAndExistingUsers(PDO $pdo): void {
     }
 }
 
+function ensureSchemaExists(PDO $pdo): void {
+    static $ensured = false;
+    if ($ensured) return;
+    $ensured = true;
+
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    if ($driver === 'mysql') {
+        try {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS calls (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    room_id BIGINT UNSIGNED NOT NULL,
+                    initiator_id BIGINT UNSIGNED NOT NULL,
+                    call_type VARCHAR(20) DEFAULT 'voice',
+                    status VARCHAR(20) DEFAULT 'calling',
+                    started_at DATETIME NULL,
+                    ended_at DATETIME NULL,
+                    created_at DATETIME NULL,
+                    updated_at DATETIME NULL,
+                    KEY calls_room_id_index (room_id),
+                    KEY calls_initiator_id_index (initiator_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS call_participants (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    call_id BIGINT UNSIGNED NOT NULL,
+                    user_id BIGINT UNSIGNED NOT NULL,
+                    status VARCHAR(20) DEFAULT 'ringing',
+                    joined_at DATETIME NULL,
+                    left_at DATETIME NULL,
+                    created_at DATETIME NULL,
+                    updated_at DATETIME NULL,
+                    UNIQUE KEY call_user_unique (call_id, user_id),
+                    KEY cp_call_id_index (call_id),
+                    KEY cp_user_id_index (user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS places (
+                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    room_id BIGINT UNSIGNED NOT NULL,
+                    created_by BIGINT UNSIGNED NOT NULL,
+                    name VARCHAR(255) NOT NULL,
+                    address TEXT NULL,
+                    latitude DECIMAL(10, 7) NOT NULL,
+                    longitude DECIMAL(10, 7) NOT NULL,
+                    radius_meters DOUBLE DEFAULT 200,
+                    alert_on_entry TINYINT(1) DEFAULT 1,
+                    alert_on_exit TINYINT(1) DEFAULT 1,
+                    created_at DATETIME NULL,
+                    updated_at DATETIME NULL,
+                    KEY places_room_id_index (room_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+        } catch (Throwable $e) {}
+    }
+}
+
 // Database Connection with Auto Fallback (Cloud SQLite or MySQL)
 function getDb(): PDO {
     static $pdo = null;
@@ -382,6 +439,7 @@ function getDb(): PDO {
                 PDO::ATTR_TIMEOUT            => 4,
             ];
             $pdo = new PDO($dsn, $user, $pass, $options);
+            ensureSchemaExists($pdo);
             return $pdo;
         } catch (Throwable $e) {
             if ($connection === 'mysql') {
@@ -403,6 +461,7 @@ function getDb(): PDO {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_TIMEOUT            => 2,
             ]);
+            ensureSchemaExists($pdo);
             return $pdo;
         } catch (Throwable $e) {
             // Local MySQL not running, seamlessly proceed to SQLite fallback
@@ -1289,6 +1348,111 @@ if ($method === 'GET' && preg_match('#^/api/v1/rooms/(\d+)$#', $uri, $m)) {
     ]);
 }
 
+// 10b. Rooms: Leave Room
+if ($method === 'POST' && preg_match('#^/api/v1/rooms/(\d+)/leave$#', $uri, $m)) {
+    $currentUser = authenticateUser($db);
+    $roomId = (int)$m[1];
+
+    $stmt = $db->prepare("SELECT * FROM room_members WHERE room_id = ? AND user_id = ? LIMIT 1");
+    $stmt->execute([$roomId, $currentUser['id']]);
+    $membership = $stmt->fetch();
+
+    if (!$membership) {
+        respond(false, 'You are not a member of this group.', null, null, 400);
+    }
+
+    $delStmt = $db->prepare("DELETE FROM room_members WHERE room_id = ? AND user_id = ?");
+    $delStmt->execute([$roomId, $currentUser['id']]);
+
+    // Insert system message into room chat
+    try {
+        $now = date('Y-m-d H:i:s');
+        $sysMsg = $db->prepare("
+            INSERT INTO messages (room_id, user_id, message_type, content, is_deleted, created_at, updated_at)
+            VALUES (?, ?, 'system', ?, 0, ?, ?)
+        ");
+        $sysMsg->execute([$roomId, $currentUser['id'], "{$currentUser['name']} left the circle.", $now, $now]);
+    } catch (Throwable $e) {}
+
+    // Check remaining members
+    $countStmt = $db->prepare("SELECT COUNT(*) FROM room_members WHERE room_id = ?");
+    $countStmt->execute([$roomId]);
+    $remaining = (int)$countStmt->fetchColumn();
+
+    if ($remaining === 0) {
+        $now = date('Y-m-d H:i:s');
+        $upd = $db->prepare("UPDATE rooms SET is_active = 0, updated_at = ? WHERE id = ?");
+        $upd->execute([$now, $roomId]);
+    } else if (($membership['role'] ?? '') === 'admin' || ($membership['role'] ?? '') === 'owner') {
+        // Transfer admin role to next oldest member
+        $nextStmt = $db->prepare("SELECT user_id FROM room_members WHERE room_id = ? ORDER BY id ASC LIMIT 1");
+        $nextStmt->execute([$roomId]);
+        $nextAdminId = $nextStmt->fetchColumn();
+        if ($nextAdminId) {
+            $now = date('Y-m-d H:i:s');
+            $makeAdmin = $db->prepare("UPDATE room_members SET role = 'admin', updated_at = ? WHERE room_id = ? AND user_id = ?");
+            $makeAdmin->execute([$now, $roomId, $nextAdminId]);
+        }
+    }
+
+    respond(true, 'You have left the group successfully.');
+}
+
+// 10c. Rooms: Remove / Kick Member from Room (Admin / Creator Only)
+if ($method === 'DELETE' && preg_match('#^/api/v1/rooms/(\d+)/members/(\d+)$#', $uri, $m)) {
+    $currentUser = authenticateUser($db);
+    $roomId = (int)$m[1];
+    $targetUserId = (int)$m[2];
+
+    // Check if room exists and check caller's role
+    $stmt = $db->prepare("
+        SELECT r.created_by, rm.role 
+        FROM rooms r
+        LEFT JOIN room_members rm ON rm.room_id = r.id AND rm.user_id = ?
+        WHERE r.id = ? LIMIT 1
+    ");
+    $stmt->execute([$currentUser['id'], $roomId]);
+    $roomData = $stmt->fetch();
+
+    if (!$roomData) {
+        respond(false, 'Room not found.', null, null, 404);
+    }
+
+    $isCreator = ((int)$roomData['created_by'] === (int)$currentUser['id']);
+    $callerRole = strtolower($roomData['role'] ?? '');
+    $isAdmin = ($callerRole === 'admin' || $callerRole === 'owner');
+
+    if (!$isCreator && !$isAdmin) {
+        respond(false, 'Only the room creator or admin can remove members.', null, null, 403);
+    }
+
+    if ($targetUserId === (int)$currentUser['id']) {
+        respond(false, 'You cannot kick yourself. Please use Leave Group instead.', null, null, 400);
+    }
+
+    // Get target user details
+    $targetStmt = $db->prepare("SELECT name FROM users WHERE id = ? LIMIT 1");
+    $targetStmt->execute([$targetUserId]);
+    $targetUser = $targetStmt->fetch();
+    $targetName = $targetUser ? $targetUser['name'] : 'Member';
+
+    // Delete membership
+    $delStmt = $db->prepare("DELETE FROM room_members WHERE room_id = ? AND user_id = ?");
+    $delStmt->execute([$roomId, $targetUserId]);
+
+    // Post system notice to room chat
+    try {
+        $now = date('Y-m-d H:i:s');
+        $sysMsg = $db->prepare("
+            INSERT INTO messages (room_id, user_id, message_type, content, is_deleted, created_at, updated_at)
+            VALUES (?, ?, 'system', ?, 0, ?, ?)
+        ");
+        $sysMsg->execute([$roomId, $currentUser['id'], "{$targetName} was removed from the circle by {$currentUser['name']}.", $now, $now]);
+    } catch (Throwable $e) {}
+
+    respond(true, "{$targetName} has been removed from the group.");
+}
+
 // 11. Locations: Room Member Locations
 if ($method === 'GET' && preg_match('#^/api/v1/rooms/(\d+)/locations$#', $uri, $m)) {
     $currentUser = authenticateUser($db);
@@ -1809,41 +1973,48 @@ if ($method === 'POST' && preg_match('#^/api/v1/rooms/(\d+)/calls$#', $uri, $m))
 
     $callType = ($body['call_type'] ?? 'voice') === 'video' ? 'video' : 'voice';
     $targetUserId = isset($body['target_user_id']) ? (int)$body['target_user_id'] : null;
+    $now = date('Y-m-d H:i:s');
 
-    // End any lingering active calls in this room by this user
-    $stmt = $db->prepare("UPDATE calls SET status = 'ended', ended_at = NOW(), updated_at = NOW() WHERE room_id = ? AND initiator_id = ? AND status IN ('calling', 'ringing', 'active')");
-    $stmt->execute([$roomId, $currentUser['id']]);
+    try {
+        // End any lingering active calls in this room by this user
+        $stmt = $db->prepare("UPDATE calls SET status = 'ended', ended_at = ?, updated_at = ? WHERE room_id = ? AND initiator_id = ? AND status IN ('calling', 'ringing', 'active')");
+        $stmt->execute([$now, $now, $roomId, $currentUser['id']]);
 
-    // Create call session
-    $stmt = $db->prepare("INSERT INTO calls (room_id, initiator_id, call_type, status, started_at, created_at, updated_at) VALUES (?, ?, ?, 'calling', NOW(), NOW(), NOW())");
-    $stmt->execute([$roomId, $currentUser['id'], $callType]);
-    $callId = (int)$db->lastInsertId();
+        // Create call session
+        $stmt = $db->prepare("INSERT INTO calls (room_id, initiator_id, call_type, status, started_at, created_at, updated_at) VALUES (?, ?, ?, 'calling', ?, ?, ?)");
+        $stmt->execute([$roomId, $currentUser['id'], $callType, $now, $now, $now]);
+        $callId = (int)$db->lastInsertId();
 
-    // Add initiator as joined participant
-    $stmt = $db->prepare("INSERT INTO call_participants (call_id, user_id, status, joined_at, created_at, updated_at) VALUES (?, ?, 'joined', NOW(), NOW(), NOW())");
-    $stmt->execute([$callId, $currentUser['id']]);
+        // Add initiator as joined participant
+        $stmt = $db->prepare("INSERT INTO call_participants (call_id, user_id, status, joined_at, created_at, updated_at) VALUES (?, ?, 'joined', ?, ?, ?)");
+        $stmt->execute([$callId, $currentUser['id'], $now, $now, $now]);
 
-    // Add participants: if target_user_id is specified (1-on-1 direct call), only ring that member!
-    if ($targetUserId !== null && $targetUserId > 0 && $targetUserId !== (int)$currentUser['id']) {
-        $otherMembers = [$targetUserId];
-    } else {
-        $stmt = $db->prepare("SELECT user_id FROM room_members WHERE room_id = ? AND user_id != ?");
-        $stmt->execute([$roomId, $currentUser['id']]);
-        $otherMembers = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-    if (!empty($otherMembers)) {
-        $partInsert = $db->prepare("INSERT INTO call_participants (call_id, user_id, status, created_at, updated_at) VALUES (?, ?, 'ringing', NOW(), NOW())");
-        foreach ($otherMembers as $targetId) {
-            $partInsert->execute([$callId, (int)$targetId]);
+        // Add participants: if target_user_id is specified (1-on-1 direct call), only ring that member!
+        if ($targetUserId !== null && $targetUserId > 0 && $targetUserId !== (int)$currentUser['id']) {
+            $otherMembers = [$targetUserId];
+        } else {
+            $stmt = $db->prepare("SELECT user_id FROM room_members WHERE room_id = ? AND user_id != ?");
+            $stmt->execute([$roomId, $currentUser['id']]);
+            $otherMembers = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
+
+        if (!empty($otherMembers)) {
+            $partInsert = $db->prepare("INSERT INTO call_participants (call_id, user_id, status, created_at, updated_at) VALUES (?, ?, 'ringing', ?, ?)");
+            foreach ($otherMembers as $targetId) {
+                try {
+                    $partInsert->execute([$callId, (int)$targetId, $now, $now]);
+                } catch (Throwable $e) {}
+            }
+        }
+
+        $stmt = $db->prepare("SELECT * FROM calls WHERE id = ? LIMIT 1");
+        $stmt->execute([$callId]);
+        $call = $stmt->fetch();
+
+        respond(true, 'Call initiated.', formatCallPayload($db, $call), null, 201);
+    } catch (Throwable $e) {
+        respond(false, 'Unable to initiate call: ' . $e->getMessage(), null, null, 500);
     }
-
-    $stmt = $db->prepare("SELECT * FROM calls WHERE id = ? LIMIT 1");
-    $stmt->execute([$callId]);
-    $call = $stmt->fetch();
-
-    respond(true, 'Call initiated.', formatCallPayload($db, $call), null, 201);
 }
 
 // 23. Calls: Get Active / Incoming Call for Current User

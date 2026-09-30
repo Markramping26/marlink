@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/widgets/empty_state_view.dart';
 import 'package:marlink_app/core/widgets/loading_view.dart';
 import 'package:marlink_app/features/auth/providers/auth_provider.dart';
 import 'package:marlink_app/features/map/providers/location_provider.dart';
+import 'package:marlink_app/features/rooms/presentation/widgets/group_members_sheet.dart';
 import 'package:marlink_app/features/rooms/providers/room_provider.dart';
 import 'package:marlink_app/features/chat/providers/chat_provider.dart';
 import 'package:marlink_app/features/chat/providers/call_provider.dart';
@@ -275,58 +277,65 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.groups_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentRoom?.name ?? 'Group Chat',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    overflow: TextOverflow.ellipsis,
+        title: InkWell(
+          onTap: currentRoom == null ? null : () => GroupMembersSheet.show(context, currentRoom),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  if (currentRoom != null)
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.statusOnline,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            '${currentRoom.membersCount} online · Code: ${currentRoom.code}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.lightTextSecondary,
+                  child: const Icon(Icons.groups_rounded, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        currentRoom?.name ?? 'Group Chat',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (currentRoom != null)
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.statusOnline,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                '${currentRoom.membersCount} online · Code: ${currentRoom.code}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.lightTextSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
         actions: [
           IconButton(
@@ -337,13 +346,40 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
             onPressed: currentRoom == null
                 ? null
                 : () async {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Starting group voice call...'),
+                          ],
+                        ),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                     final call = await ref
                         .read(callNotifierProvider.notifier)
                         .startCall(currentRoom.id, isVideo: false);
-                    if (call != null && context.mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => CallScreen(call: call)),
-                      );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      if (call != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => CallScreen(call: call)),
+                        );
+                      } else {
+                        final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect call. Please check your connection.';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(err),
+                            backgroundColor: AppColors.alertEmergency,
+                          ),
+                        );
+                      }
                     }
                   },
           ),
@@ -355,13 +391,40 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
             onPressed: currentRoom == null
                 ? null
                 : () async {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Starting group video call...'),
+                          ],
+                        ),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                     final call = await ref
                         .read(callNotifierProvider.notifier)
                         .startCall(currentRoom.id, isVideo: true);
-                    if (call != null && context.mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => CallScreen(call: call)),
-                      );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      if (call != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => CallScreen(call: call)),
+                        );
+                      } else {
+                        final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect video call. Please check your connection.';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(err),
+                            backgroundColor: AppColors.alertEmergency,
+                          ),
+                        );
+                      }
                     }
                   },
           ),
@@ -379,6 +442,113 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
             icon: const Icon(Icons.share_location_outlined),
             tooltip: 'Location Sharing Options',
             onPressed: () => _showLocationOptionsSheet(context),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Group Options',
+            onSelected: (val) async {
+              if (currentRoom == null) return;
+              if (val == 'members') {
+                GroupMembersSheet.show(context, currentRoom);
+              } else if (val == 'copy_code') {
+                Clipboard.setData(ClipboardData(text: currentRoom.code));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Group code ${currentRoom.code} copied!')),
+                );
+              } else if (val == 'leave') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (dCtx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Row(
+                      children: [
+                        Icon(Icons.exit_to_app_rounded, color: AppColors.alertEmergency, size: 24),
+                        SizedBox(width: 8),
+                        Text('Leave Group'),
+                      ],
+                    ),
+                    content: Text('Are you sure you want to leave "${currentRoom.name}"?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dCtx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.alertEmergency,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => Navigator.pop(dCtx, true),
+                        child: const Text('Leave Group'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Leaving "${currentRoom.name}"...'),
+                        ],
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  final success = await ref.read(roomsNotifierProvider.notifier).leaveRoom(currentRoom.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(success
+                            ? 'You have left "${currentRoom.name}".'
+                            : 'Failed to leave group. Please try again.'),
+                        backgroundColor: success ? AppColors.statusOnline : AppColors.alertEmergency,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'members',
+                child: Row(
+                  children: [
+                    Icon(Icons.people_alt_rounded, size: 18, color: AppColors.brandSky),
+                    SizedBox(width: 10),
+                    Text('Members & Manage'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'copy_code',
+                child: Row(
+                  children: [
+                    Icon(Icons.copy_rounded, size: 18, color: AppColors.brandSky),
+                    SizedBox(width: 10),
+                    Text('Copy Invite Code'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'leave',
+                child: Row(
+                  children: [
+                    Icon(Icons.exit_to_app_rounded, size: 18, color: AppColors.alertEmergency),
+                    SizedBox(width: 10),
+                    Text('Leave Group', style: TextStyle(color: AppColors.alertEmergency)),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 4),
         ],

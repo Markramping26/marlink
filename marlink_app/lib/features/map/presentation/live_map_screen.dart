@@ -834,15 +834,85 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
           Navigator.pop(context);
           final currentRoom = ref.read(roomsNotifierProvider).currentRoom;
           if (currentRoom != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Starting voice call with ${member.displayName}...'),
+                  ],
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
             final call = await ref.read(callNotifierProvider.notifier).startCall(
               currentRoom.id,
               isVideo: false,
               targetUserId: member.userId,
             );
-            if (call != null && mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => CallScreen(call: call)),
-              );
+            if (mounted) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              if (call != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => CallScreen(call: call)),
+                );
+              } else {
+                final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect call.';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(err),
+                    backgroundColor: AppColors.alertEmergency,
+                  ),
+                );
+              }
+            }
+          }
+        },
+        onVideoCall: () async {
+          Navigator.pop(context);
+          final currentRoom = ref.read(roomsNotifierProvider).currentRoom;
+          if (currentRoom != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Starting video call with ${member.displayName}...'),
+                  ],
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            final call = await ref.read(callNotifierProvider.notifier).startCall(
+              currentRoom.id,
+              isVideo: true,
+              targetUserId: member.userId,
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              if (call != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => CallScreen(call: call)),
+                );
+              } else {
+                final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect video call.';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(err),
+                    backgroundColor: AppColors.alertEmergency,
+                  ),
+                );
+              }
             }
           }
         },

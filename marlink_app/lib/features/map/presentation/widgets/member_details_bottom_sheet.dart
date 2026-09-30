@@ -13,6 +13,7 @@ class MemberDetailsBottomSheet extends StatelessWidget {
   final VoidCallback onSendMessage;
   final VoidCallback onSendAlert;
   final VoidCallback onVoiceCall;
+  final VoidCallback? onVideoCall;
   final VoidCallback? onTraceDirections;
 
   const MemberDetailsBottomSheet({
@@ -23,6 +24,7 @@ class MemberDetailsBottomSheet extends StatelessWidget {
     required this.onSendMessage,
     required this.onSendAlert,
     required this.onVoiceCall,
+    this.onVideoCall,
     this.onTraceDirections,
   });
 
@@ -274,12 +276,20 @@ class MemberDetailsBottomSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               IconButton.filledTonal(
                 onPressed: onVoiceCall,
                 icon: const Icon(Icons.call_outlined),
                 tooltip: 'Voice Call',
               ),
+              if (onVideoCall != null) ...[
+                const SizedBox(width: 6),
+                IconButton.filledTonal(
+                  onPressed: onVideoCall,
+                  icon: const Icon(Icons.videocam_outlined),
+                  tooltip: 'Video Call',
+                ),
+              ],
             ],
           ),
         ],

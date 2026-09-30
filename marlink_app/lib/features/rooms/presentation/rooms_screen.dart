@@ -8,6 +8,7 @@ import '../domain/models/room_model.dart';
 import '../providers/room_provider.dart';
 import 'widgets/create_room_dialog.dart';
 import 'widgets/join_room_dialog.dart';
+import 'widgets/group_members_sheet.dart';
 
 class RoomsScreen extends ConsumerWidget {
   const RoomsScreen({super.key});
@@ -518,6 +519,15 @@ class RoomsScreen extends ConsumerWidget {
                   ),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.people_alt_rounded, color: AppColors.brandSky),
+                  title: const Text('Group Members & Management', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('${room.membersCount} members · View list or manage members'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    GroupMembersSheet.show(context, room);
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Icons.copy_rounded, color: AppColors.brandSky),
                   title: const Text('Copy Group Invite Code', style: TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(room.code),
@@ -538,22 +548,60 @@ class RoomsScreen extends ConsumerWidget {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (dCtx) => AlertDialog(
-                        title: const Text('Leave Group'),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Row(
+                          children: [
+                            Icon(Icons.exit_to_app_rounded, color: AppColors.alertEmergency, size: 24),
+                            SizedBox(width: 8),
+                            Text('Leave Group'),
+                          ],
+                        ),
                         content: Text('Are you sure you want to leave "${room.name}"?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(dCtx, false),
                             child: const Text('Cancel'),
                           ),
-                          TextButton(
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.alertEmergency,
+                              foregroundColor: Colors.white,
+                            ),
                             onPressed: () => Navigator.pop(dCtx, true),
-                            child: const Text('Leave Group', style: TextStyle(color: Colors.red)),
+                            child: const Text('Leave Group'),
                           ),
                         ],
                       ),
                     );
-                    if (confirm == true) {
-                      await ref.read(roomsNotifierProvider.notifier).leaveRoom(room.id);
+                    if (confirm == true && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              ),
+                              const SizedBox(width: 12),
+                              Text('Leaving "${room.name}"...'),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                      final success = await ref.read(roomsNotifierProvider.notifier).leaveRoom(room.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(success
+                                ? 'You have left "${room.name}".'
+                                : 'Failed to leave group. Please try again.'),
+                            backgroundColor: success ? AppColors.statusOnline : AppColors.alertEmergency,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
