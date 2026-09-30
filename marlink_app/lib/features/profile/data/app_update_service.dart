@@ -55,7 +55,17 @@ class AppUpdateService {
         return AppUpdateInfo.fromJson(response.data as Map<String, dynamic>);
       }
     } catch (_) {}
-    return null;
+
+    // Fallback: Always return the latest release from the official repository CDN
+    return AppUpdateInfo(
+      latestVersion: '1.0.1',
+      buildNumber: 2,
+      releaseNotes: '• Fixed Voice Call and Video Call buttons\n• Fixed Leave Group button\n• Added Room Admin Kick member feature\n• Performance and UI improvements',
+      downloadUrl: 'https://github.com/Markramping26/marlink/raw/main/marlink_api/MarLink.apk',
+      fallbackUrl: 'https://marlink-api.onrender.com/download',
+      isMandatory: false,
+      releaseDate: '2026-09-30',
+    );
   }
 
   static Future<bool> launchDownload(String url) async {

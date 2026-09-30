@@ -751,6 +751,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton.icon(
+                        onPressed: () => AppUpdateService.launchDownload(
+                          'https://github.com/Markramping26/marlink/raw/main/marlink_api/MarLink.apk',
+                        ),
+                        icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.brandSky),
+                        label: const Text(
+                          'Direct Download Latest APK',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brandSky),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
