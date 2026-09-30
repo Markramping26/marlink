@@ -411,6 +411,49 @@ function ensureSchemaExists(PDO $pdo): void {
             ");
         } catch (Throwable $e) {}
     }
+
+    if ($driver === 'sqlite') {
+        try {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS calls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    room_id INTEGER NOT NULL,
+                    initiator_id INTEGER NOT NULL,
+                    call_type TEXT DEFAULT 'voice',
+                    status TEXT DEFAULT 'calling',
+                    started_at DATETIME,
+                    ended_at DATETIME,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                );
+                CREATE TABLE IF NOT EXISTS call_participants (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    call_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    status TEXT DEFAULT 'ringing',
+                    joined_at DATETIME,
+                    left_at DATETIME,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    UNIQUE(call_id, user_id)
+                );
+                CREATE TABLE IF NOT EXISTS places (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    room_id INTEGER NOT NULL,
+                    created_by INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    address TEXT,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    radius_meters REAL DEFAULT 200,
+                    alert_on_entry INTEGER DEFAULT 1,
+                    alert_on_exit INTEGER DEFAULT 1,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                );
+            ");
+        } catch (Throwable $e) {}
+    }
 }
 
 // Database Connection with Auto Fallback (Cloud SQLite or MySQL)
@@ -485,6 +528,7 @@ function getDb(): PDO {
     } else {
         syncDefaultAndExistingUsers($pdo);
     }
+    ensureSchemaExists($pdo);
     return $pdo;
 }
 
@@ -1976,6 +2020,7 @@ if ($method === 'POST' && preg_match('#^/api/v1/rooms/(\d+)/calls$#', $uri, $m))
     $now = date('Y-m-d H:i:s');
 
     try {
+        ensureSchemaExists($db);
         // End any lingering active calls in this room by this user
         $stmt = $db->prepare("UPDATE calls SET status = 'ended', ended_at = ?, updated_at = ? WHERE room_id = ? AND initiator_id = ? AND status IN ('calling', 'ringing', 'active')");
         $stmt->execute([$now, $now, $roomId, $currentUser['id']]);
