@@ -132,4 +132,38 @@ class NotificationService {
       await _channel.invokeMethod('playChime');
     } catch (_) {}
   }
+
+  /// Start playing outgoing call ringback tone (caller waiting sound)
+  Future<void> startRingback() async {
+    try {
+      await _channel.invokeMethod('startRingback');
+    } catch (e) {
+      debugPrint('NotificationService: startRingback error: $e');
+    }
+  }
+
+  /// Stop playing outgoing call ringback tone
+  Future<void> stopRingback() async {
+    try {
+      await _channel.invokeMethod('stopRingback');
+    } catch (e) {
+      debugPrint('NotificationService: stopRingback error: $e');
+    }
+  }
+
+  /// Speak navigation maneuver or voice announcement via native Text-to-Speech
+  Future<void> speak(String text) async {
+    try {
+      await _channel.invokeMethod('speak', {'text': text});
+    } catch (e) {
+      debugPrint('NotificationService: speak error: $e');
+    }
+  }
+
+  /// Stop current spoken voice guidance
+  Future<void> stopSpeak() async {
+    try {
+      await _channel.invokeMethod('stopSpeak');
+    } catch (_) {}
+  }
 }

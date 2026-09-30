@@ -17,14 +17,18 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.media.ToneGenerator
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.speech.tts.TextToSpeech
 import android.util.Rational
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.util.Locale
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterActivity(), TextToSpeech.OnInitListener {
     private val PIP_CHANNEL = "com.marlink.app/pip"
     private val NOTIFICATION_CHANNEL = "com.marlink.app/notifications"
     private val NOTIF_SYSTEM_CHANNEL_ID = "marlink_alerts_channel"
@@ -33,6 +37,40 @@ class MainActivity : FlutterActivity() {
     private var pipChannel: MethodChannel? = null
     private var autoPipEnabled: Boolean = false
     private var ringtone: Ringtone? = null
+    private var ringbackTone: ToneGenerator? = null
+    private var ringbackRunnable: Runnable? = null
+    private val ringbackHandler = Handler(Looper.getMainLooper())
+    private var tts: TextToSpeech? = null
+    private var isTtsReady: Boolean = false
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            tts = TextToSpeech(applicationContext, this)
+        } catch (e: Exception) {
+            // Ignored
+        }
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            try {
+                tts?.language = Locale.US
+                isTtsReady = true
+            } catch (e: Exception) {}
+        }
+    }
+
+    override fun onDestroy() {
+        stopRingbackTone()
+        stopCallRingtone()
+        try {
+            tts?.stop()
+            tts?.shutdown()
+            tts = null
+        } catch (e: Exception) {}
+        super.onDestroy()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -104,6 +142,29 @@ class MainActivity : FlutterActivity() {
                     stopCallRingtone()
                     result.success(true)
                 }
+                "startRingback" -> {
+                    startRingbackTone()
+                    result.success(true)
+                }
+                "stopRingback" -> {
+                    stopRingbackTone()
+                    result.success(true)
+                }
+                "speak" -> {
+                    val text = call.argument<String>("text") ?: ""
+                    if (text.isNotEmpty() && isTtsReady) {
+                        try {
+                            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "marlink_nav_${System.currentTimeMillis()}")
+                        } catch (e: Exception) {}
+                    }
+                    result.success(true)
+                }
+                "stopSpeak" -> {
+                    try {
+                        tts?.stop()
+                    } catch (e: Exception) {}
+                    result.success(true)
+                }
                 "cancelNotification" -> {
                     val id = call.argument<Int>("id") ?: 0
                     val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -173,7 +234,7 @@ class MainActivity : FlutterActivity() {
 
             // Dedicated High-Priority Incoming Calls Channel
             val callChannelName = "MarLink Voice & Video Calls"
-            val callChannelDesc = "Incoming voice and video call alerts from circle members"
+            val callChannelDesc = "Incoming voice and video call alerts from group members"
             val callChannel = NotificationChannel(
                 NOTIF_CALL_CHANNEL_ID,
                 callChannelName,
@@ -187,6 +248,32 @@ class MainActivity : FlutterActivity() {
             }
             notificationManager.createNotificationChannel(callChannel)
         }
+    }
+
+    private fun startRingbackTone() {
+        stopRingbackTone()
+        try {
+            ringbackTone = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80)
+            ringbackRunnable = object : Runnable {
+                override fun run() {
+                    try {
+                        ringbackTone?.startTone(ToneGenerator.TONE_SUP_RINGTONE, 1800)
+                        ringbackHandler.postDelayed(this, 4000)
+                    } catch (e: Exception) {}
+                }
+            }
+            ringbackHandler.post(ringbackRunnable!!)
+        } catch (e: Exception) {}
+    }
+
+    private fun stopRingbackTone() {
+        try {
+            ringbackRunnable?.let { ringbackHandler.removeCallbacks(it) }
+            ringbackRunnable = null
+            ringbackTone?.stopTone()
+            ringbackTone?.release()
+            ringbackTone = null
+        } catch (e: Exception) {}
     }
 
     private fun startCallRingtone() {

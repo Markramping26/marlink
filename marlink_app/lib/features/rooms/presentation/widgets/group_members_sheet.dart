@@ -95,7 +95,7 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
                 text: room.name,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              const TextSpan(text: '? They will no longer have access to this circle.'),
+              const TextSpan(text: '? They will no longer have access to this group.'),
             ],
           ),
         ),
@@ -176,7 +176,7 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
             Text('Leave Group'),
           ],
         ),
-        content: Text('Are you sure you want to leave "${room.name}"? You will stop sharing and receiving location updates from this circle.'),
+        content: Text('Are you sure you want to leave "${room.name}"? You will stop sharing and receiving location updates from this group.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

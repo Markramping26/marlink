@@ -76,14 +76,24 @@ class GlobalNotificationService {
               // Only notify if message was sent by someone else
               if (m.userId != authUser.id) {
                 final preview = m.content ?? (m.isImage ? '📷 Photo' : '📍 Location pin');
-                
-                // Show native heads-up system notification with chime sound
-                NotificationService.instance.showChatMessage(
-                  senderName: m.senderName,
-                  message: preview,
-                  roomName: currentRoom.name,
-                  playSound: true,
-                );
+                final isSos = (m.content != null && m.content!.contains('EMERGENCY SOS')) ||
+                    m.locationLabel == 'SOS EMERGENCY LOCATION';
+
+                if (isSos) {
+                  // Loud emergency siren notification with vibration
+                  NotificationService.instance.showSosAlert(
+                    senderName: m.senderName,
+                    roomName: currentRoom.name,
+                  );
+                } else {
+                  // Standard heads-up message notification with chime sound
+                  NotificationService.instance.showChatMessage(
+                    senderName: m.senderName,
+                    message: preview,
+                    roomName: currentRoom.name,
+                    playSound: true,
+                  );
+                }
 
                 // Broadcast for in-app floating banner
                 _incomingMessageStream.add(m);

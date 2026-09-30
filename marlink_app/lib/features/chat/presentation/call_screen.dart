@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/pip_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/marlink_avatar.dart';
@@ -25,6 +26,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
   CameraController? _cameraController;
   bool _isCameraInitializing = false;
   bool _isSelfViewFullscreen = false;
+  bool _isScreenSharing = false;
 
   @override
   void initState() {
@@ -34,6 +36,11 @@ class _CallScreenState extends ConsumerState<CallScreen>
       duration: const Duration(milliseconds: 2000),
     )..repeat();
 
+    // Start outgoing ringback tone if not yet connected
+    if (!widget.call.isActive && widget.call.isRinging) {
+      NotificationService.instance.startRingback();
+    }
+
     if (widget.call.isVideo) {
       _initCamera();
     }
@@ -41,6 +48,7 @@ class _CallScreenState extends ConsumerState<CallScreen>
 
   @override
   void dispose() {
+    NotificationService.instance.stopRingback();
     _pulseController.dispose();
     _cameraController?.dispose();
     super.dispose();
@@ -167,10 +175,14 @@ class _CallScreenState extends ConsumerState<CallScreen>
     final isVideo = activeCall.isVideo || hasCameraActive;
     final isConnected = activeCall.isActive || callState.callDuration.inSeconds > 0;
 
-    // Listen for call ended to pop screen automatically
+    // Listen for call ended or answered to control ringback and screen popping
     ref.listen<CallState>(callNotifierProvider, (prev, next) {
       if (prev?.activeCall != null && next.activeCall == null) {
+        NotificationService.instance.stopRingback();
         if (mounted) Navigator.of(context).maybePop();
+      }
+      if (next.activeCall?.isActive == true || next.callDuration.inSeconds > 0) {
+        NotificationService.instance.stopRingback();
       }
     });
 
@@ -298,33 +310,6 @@ class _CallScreenState extends ConsumerState<CallScreen>
                             ],
                           ),
                         ),
-
-                        // Security encryption badge (Only if enough room)
-                        if (screenWidth > 330)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.lock_outline_rounded,
-                                    size: 11, color: AppColors.brandSky),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Encrypted',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: AppColors.brandSky,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -666,6 +651,104 @@ class _CallScreenState extends ConsumerState<CallScreen>
     );
   }
 
+  Widget _buildScreenSharingCanvas(CallModel activeCall, ({String title, String? avatarUrl, bool isGroup}) displayInfo) {
+    return Container(
+      color: const Color(0xFF080F1E),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Screen share pulsating wave
+              AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, _) {
+                  return Container(
+                    width: 104,
+                    height: 104,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.brandSky.withValues(alpha: 0.12 * (1.0 - _pulseController.value)),
+                      border: Border.all(
+                        color: AppColors.brandSky.withValues(alpha: 0.8),
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.brandSky.withValues(alpha: 0.35),
+                          blurRadius: 24,
+                          spreadRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.screen_share_rounded, size: 48, color: AppColors.brandSky),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 22),
+              const Text(
+                'Live Screen Share Active',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'All members in "${displayInfo.title}" can view your device screen.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.darkTextSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      PipService.instance.enterPip();
+                    },
+                    icon: const Icon(Icons.picture_in_picture_alt_rounded, size: 18),
+                    label: const Text('Minimize / PiP'),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      setState(() => _isScreenSharing = false);
+                    },
+                    icon: const Icon(Icons.stop_screen_share_rounded, size: 18),
+                    label: const Text('Stop Sharing'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildVideoBody(
     CallState callState,
     CallModel activeCall,
@@ -679,29 +762,32 @@ class _CallScreenState extends ConsumerState<CallScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Main Canvas: either user's full camera preview OR remote participant view
-        GestureDetector(
-          onTap: () {
-            if (hasLiveCamera) {
-              setState(() => _isSelfViewFullscreen = !_isSelfViewFullscreen);
-            }
-          },
-          child: Container(
-            color: const Color(0xFF0A1224),
-            child: _isSelfViewFullscreen
-                ? (hasLiveCamera
-                    ? FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _cameraController!.value.previewSize?.height ?? 720,
-                          height: _cameraController!.value.previewSize?.width ?? 1280,
-                          child: CameraPreview(_cameraController!),
-                        ),
-                      )
-                    : _buildCameraOffPlaceholder(displayInfo))
-                : _buildRemoteParticipantCanvas(activeCall, displayInfo, isConnected),
+        // Main Canvas: Screen share OR user camera preview OR remote participant view
+        if (_isScreenSharing)
+          _buildScreenSharingCanvas(activeCall, displayInfo)
+        else
+          GestureDetector(
+            onTap: () {
+              if (hasLiveCamera) {
+                setState(() => _isSelfViewFullscreen = !_isSelfViewFullscreen);
+              }
+            },
+            child: Container(
+              color: const Color(0xFF0A1224),
+              child: _isSelfViewFullscreen
+                  ? (hasLiveCamera
+                      ? FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: _cameraController!.value.previewSize?.height ?? 720,
+                            height: _cameraController!.value.previewSize?.width ?? 1280,
+                            child: CameraPreview(_cameraController!),
+                          ),
+                        )
+                      : _buildCameraOffPlaceholder(displayInfo))
+                  : _buildRemoteParticipantCanvas(activeCall, displayInfo, isConnected),
+            ),
           ),
-        ),
 
         // Floating Picture-in-Picture Tile (Top Right)
         Positioned(
@@ -1083,9 +1169,24 @@ class _CallScreenState extends ConsumerState<CallScreen>
               },
               tooltip: callState.isSpeakerOn ? 'Speaker On' : 'Speaker Off',
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
-            // 5. End Call Button (Red Circle)
+            // 5. Screen Share Toggle (Available in Video Calls)
+            if (isVideo) ...[
+              _buildDockButton(
+                icon: _isScreenSharing ? Icons.stop_screen_share_rounded : Icons.screen_share_rounded,
+                isActive: _isScreenSharing,
+                activeColor: AppColors.brandSky,
+                inactiveColor: Colors.white,
+                onTap: () {
+                  setState(() => _isScreenSharing = !_isScreenSharing);
+                },
+                tooltip: _isScreenSharing ? 'Stop Screen Share' : 'Share Screen',
+              ),
+              const SizedBox(width: 10),
+            ],
+
+            // 6. End Call Button (Red Circle)
             Material(
               color: Colors.transparent,
               child: InkWell(

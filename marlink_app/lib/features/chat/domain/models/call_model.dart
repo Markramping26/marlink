@@ -78,6 +78,7 @@ class CallModel {
   bool get isVoice => callType == 'voice';
   bool get isActive => status == 'active';
   bool get isCalling => status == 'calling' || status == 'ringing';
+  bool get isRinging => status == 'ringing' || status == 'calling';
   bool get isEnded => status == 'ended' || status == 'rejected';
 
   bool get isDirectCall => participants.where((p) => p.userId != initiatorId).length == 1;

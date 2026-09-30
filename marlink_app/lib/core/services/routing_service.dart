@@ -85,8 +85,8 @@ class RoutingService {
 
   final Dio _dio = Dio(
     BaseOptions(
-      connectTimeout: const Duration(seconds: 6),
-      receiveTimeout: const Duration(seconds: 6),
+      connectTimeout: const Duration(seconds: 12),
+      receiveTimeout: const Duration(seconds: 12),
     ),
   );
 
@@ -166,7 +166,7 @@ class RoutingService {
             }
           }
 
-          if (roadPoints.isNotEmpty) {
+          if (roadPoints.length >= 2) {
             return RoadRoute(
               points: roadPoints,
               distanceMeters: dist,
@@ -177,31 +177,10 @@ class RoutingService {
         }
       }
     } catch (_) {
-      // Graceful fallback to direct line if offline or server timeout
+      // Keep previous valid route on network blip
     }
 
-    // Direct line fallback
-    final directDist = HaversineCalculator.distanceBetweenMeters(
-      from.latitude,
-      from.longitude,
-      to.latitude,
-      to.longitude,
-    );
-
-    return RoadRoute(
-      points: [from, to],
-      distanceMeters: directDist,
-      durationSeconds: (directDist / 8.33), // Approx 30 km/h driving
-      steps: [
-        NavigationStep(
-          instruction: 'Proceed directly toward destination',
-          type: 'depart',
-          modifier: 'straight',
-          distanceMeters: directDist,
-          durationSeconds: directDist / 8.33,
-          roadName: '',
-        ),
-      ],
-    );
+    // Do NOT return a direct straight line across roads; return null so the existing road polyline is preserved
+    return null;
   }
 }

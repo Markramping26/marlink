@@ -93,6 +93,7 @@ class TracingNotifier extends StateNotifier<TracingState> {
 
   void stopTracing() {
     NotificationService.instance.cancelNotification(navigationNotificationId);
+    NotificationService.instance.stopSpeak();
     state = const TracingState();
   }
 
@@ -105,7 +106,11 @@ class TracingNotifier extends StateNotifier<TracingState> {
   }
 
   void toggleSound() {
-    state = state.copyWith(isSoundEnabled: !state.isSoundEnabled);
+    final nextSound = !state.isSoundEnabled;
+    state = state.copyWith(isSoundEnabled: nextSound);
+    if (!nextSound) {
+      NotificationService.instance.stopSpeak();
+    }
   }
 
   void updateTracedMember(MemberLocationModel updated) {
@@ -121,17 +126,19 @@ class TracingNotifier extends StateNotifier<TracingState> {
     try {
       final route = await RoutingService.instance.getRoadRoute(from: from, to: to);
       if (state.isTracing) {
+        // If route is null due to network blip, preserve previous valid route!
+        final activeRoute = route ?? state.currentRoute;
         state = state.copyWith(
-          currentRoute: route,
+          currentRoute: activeRoute,
           lastRouteOrigin: from,
           lastRouteTarget: to,
           isLoadingRoute: false,
         );
 
-        final step = route?.currentStep;
+        final step = activeRoute?.currentStep;
         if (state.tracedMember != null) {
           final member = state.tracedMember!;
-          if (step != null && route != null) {
+          if (step != null && activeRoute != null) {
             final stepDistClean = HaversineCalculator.formatDistance(step.distanceMeters, includeAway: false);
             final emoji = step.maneuverEmoji;
             final roadTitle = step.roadName.isNotEmpty ? step.roadName : step.instruction;
@@ -139,15 +146,15 @@ class TracingNotifier extends StateNotifier<TracingState> {
             NotificationService.instance.showNotification(
               id: navigationNotificationId,
               title: '$emoji In $stepDistClean • $roadTitle',
-              body: '${step.instruction} • ${route.formattedDistance} (${route.formattedDuration}) to ${member.displayName}',
+              body: '${step.instruction} • ${activeRoute.formattedDistance} (${activeRoute.formattedDuration}) to ${member.displayName}',
               isAlert: false,
               isNavigation: true,
             );
-          } else if (route != null) {
+          } else if (activeRoute != null) {
             NotificationService.instance.showNotification(
               id: navigationNotificationId,
               title: '🎯 Tracing ${member.displayName}',
-              body: '${route.formattedDistance} remaining (${route.formattedDuration}) • Road navigation active',
+              body: '${activeRoute.formattedDistance} remaining (${activeRoute.formattedDuration}) • Road navigation active',
               isAlert: false,
               isNavigation: true,
             );
@@ -159,6 +166,12 @@ class TracingNotifier extends StateNotifier<TracingState> {
             step.instruction != state.lastChimeInstruction) {
           state = state.copyWith(lastChimeInstruction: step.instruction);
           NotificationService.instance.playChime();
+          // Spoken Turn-by-Turn Voice Navigation (e.g. "In 100 meters, turn left onto Main Street")
+          final stepDistClean = HaversineCalculator.formatDistance(step.distanceMeters, includeAway: false);
+          final spokenPrompt = step.distanceMeters > 20
+              ? 'In $stepDistClean, ${step.instruction}'
+              : step.instruction;
+          NotificationService.instance.speak(spokenPrompt);
         }
       } else {
         state = state.copyWith(isLoadingRoute: false);

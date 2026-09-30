@@ -175,7 +175,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Join MarLink to connect and share live locations with your circle.',
+                        'Join MarLink to connect and share live locations with your group.',
                         style: TextStyle(
                           fontSize: 14,
                           height: 1.4,

@@ -284,6 +284,11 @@ function syncDefaultAndExistingUsers(PDO $pdo): void {
         $pdo->exec("
             INSERT OR IGNORE INTO rooms (id, code, name, description, created_by, is_active, created_at, updated_at)
             VALUES (1, 'FAM-82K4', 'Family', 'Official family safety & location sharing group.', 1, 1, datetime('now'), datetime('now'));
+            INSERT OR IGNORE INTO room_members (room_id, user_id, role, is_location_enabled, joined_at, created_at, updated_at)
+            VALUES (1, 1, 'owner', 1, datetime('now'), datetime('now'), datetime('now')),
+                   (1, 2, 'admin', 1, datetime('now'), datetime('now'), datetime('now')),
+                   (1, 3, 'member', 1, datetime('now'), datetime('now'), datetime('now')),
+                   (1, 4, 'member', 1, datetime('now'), datetime('now'), datetime('now'));
         ");
     }
 
@@ -293,26 +298,16 @@ function syncDefaultAndExistingUsers(PDO $pdo): void {
         $pdo->exec("
             INSERT OR IGNORE INTO rooms (id, code, name, description, created_by, is_active, created_at, updated_at)
             VALUES (2, 'MAR-B510', 'Testing', 'Charchar', 3, 1, datetime('now'), datetime('now'));
+            INSERT OR IGNORE INTO room_members (room_id, user_id, role, is_location_enabled, joined_at, created_at, updated_at)
+            VALUES (2, 3, 'owner', 1, datetime('now'), datetime('now'), datetime('now')),
+                   (2, 4, 'member', 1, datetime('now'), datetime('now'), datetime('now'));
         ");
     }
 
-    // 6. Connect Loleng, Mark, Anna, John to the rooms
-    $members = [
-        [1, 1, 'owner'],
-        [1, 2, 'admin'],
-        [1, 3, 'member'],
-        [1, 4, 'member'],
-        [2, 3, 'owner'],
-        [2, 4, 'member'],
-    ];
-    foreach ($members as $m) {
-        $chk = $pdo->prepare("SELECT id FROM room_members WHERE room_id = ? AND user_id = ? LIMIT 1");
-        $chk->execute([$m[0], $m[1]]);
-        if (!$chk->fetch()) {
-            $ins = $pdo->prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role, is_location_enabled, joined_at, created_at, updated_at) VALUES (?, ?, ?, 1, datetime('now'), datetime('now'), datetime('now'))");
-            $ins->execute([$m[0], $m[1], $m[2]]);
-        }
-    }
+    // Clean up test leave message from Family group (Room 1)
+    try {
+        $pdo->exec("DELETE FROM messages WHERE room_id = 1 AND content LIKE '%left the %'");
+    } catch (Throwable $e) {}
 
     // 7. Ensure `locations` table exists and seed member locations (Tupi & Polomolok)
     $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
@@ -1274,7 +1269,7 @@ if ($method === 'POST' && $uri === '/api/v1/rooms/join') {
     $room = $stmt->fetch();
 
     if (!$room) {
-        respond(false, 'Circle with invite code "' . $rawCode . '" does not exist. Please check the code.', null, null, 404);
+        respond(false, 'Group with invite code "' . $rawCode . '" does not exist. Please check the code.', null, null, 404);
     }
 
     $roomId = (int)$room['id'];
@@ -1415,7 +1410,7 @@ if ($method === 'POST' && preg_match('#^/api/v1/rooms/(\d+)/leave$#', $uri, $m))
             INSERT INTO messages (room_id, user_id, message_type, content, is_deleted, created_at, updated_at)
             VALUES (?, ?, 'system', ?, 0, ?, ?)
         ");
-        $sysMsg->execute([$roomId, $currentUser['id'], "{$currentUser['name']} left the circle.", $now, $now]);
+        $sysMsg->execute([$roomId, $currentUser['id'], "{$currentUser['name']} left the group.", $now, $now]);
     } catch (Throwable $e) {}
 
     // Check remaining members
@@ -1491,7 +1486,7 @@ if ($method === 'DELETE' && preg_match('#^/api/v1/rooms/(\d+)/members/(\d+)$#', 
             INSERT INTO messages (room_id, user_id, message_type, content, is_deleted, created_at, updated_at)
             VALUES (?, ?, 'system', ?, 0, ?, ?)
         ");
-        $sysMsg->execute([$roomId, $currentUser['id'], "{$targetName} was removed from the circle by {$currentUser['name']}.", $now, $now]);
+        $sysMsg->execute([$roomId, $currentUser['id'], "{$targetName} was removed from the group by {$currentUser['name']}.", $now, $now]);
     } catch (Throwable $e) {}
 
     respond(true, "{$targetName} has been removed from the group.");

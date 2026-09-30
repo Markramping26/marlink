@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -263,29 +262,23 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                 maxZoom: 20,
               ),
 
-              // 2. Tracing Road Polyline between User and Target Member
-              if (tracingState.isTracing && mapState.myLatLng != null && tracingState.tracedMember != null)
+              // 2. Tracing Road Polyline between User and Target Member (Only valid roads, never straight lines)
+              if (tracingState.isTracing &&
+                  mapState.myLatLng != null &&
+                  tracingState.tracedMember != null &&
+                  tracingState.currentRoute != null &&
+                  tracingState.currentRoute!.points.length >= 2)
                 PolylineLayer(
                   polylines: [
                     // Outer road glow / shadow
                     Polyline(
-                      points: tracingState.currentRoute != null && tracingState.currentRoute!.points.isNotEmpty
-                          ? tracingState.currentRoute!.points
-                          : [
-                              mapState.myLatLng!,
-                              LatLng(tracingState.tracedMember!.latitude, tracingState.tracedMember!.longitude),
-                            ],
+                      points: tracingState.currentRoute!.points,
                       strokeWidth: 8.0,
                       color: AppColors.brandSky.withValues(alpha: 0.35),
                     ),
                     // Core road navigation line
                     Polyline(
-                      points: tracingState.currentRoute != null && tracingState.currentRoute!.points.isNotEmpty
-                          ? tracingState.currentRoute!.points
-                          : [
-                              mapState.myLatLng!,
-                              LatLng(tracingState.tracedMember!.latitude, tracingState.tracedMember!.longitude),
-                            ],
+                      points: tracingState.currentRoute!.points,
                       strokeWidth: 4.5,
                       color: AppColors.brandSky,
                     ),
@@ -653,21 +646,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // 1. Directional Heading Arrow if in Navigation / Following mode
-                      if (isNavFollow && bearing != null)
-                        Transform.rotate(
-                          angle: bearing * math.pi / 180,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 2),
-                            child: const Icon(
-                              Icons.navigation_rounded,
-                              color: AppColors.brandSky,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-
-                      // 2. Location Pin (Teardrop shape with User Initials / Avatar)
+                      // Location Pin (Teardrop shape with User Initials / Avatar at exact location)
                       CustomPaint(
                         painter: LocationPinPainter(
                           pinColor: pinColor,

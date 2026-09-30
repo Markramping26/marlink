@@ -146,7 +146,7 @@ class AlertsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Press and hold for 3 seconds to alert "${currentRoom?.name ?? 'your circle'}" with your live coordinates, battery level, and speed.',
+                    'Press and hold for 3 seconds to alert "${currentRoom?.name ?? 'your group'}" with your live coordinates, battery level, and speed.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -218,7 +218,7 @@ class AlertsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'No active or recent alerts in this circle.',
+                      'No active or recent alerts in this group.',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
