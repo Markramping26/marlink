@@ -8,6 +8,7 @@ import 'package:marlink_app/core/services/pip_service.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/utils/haversine_calculator.dart';
 import 'package:marlink_app/core/widgets/marlink_avatar.dart';
+import 'package:marlink_app/core/widgets/marlink_toast.dart';
 import 'package:marlink_app/features/auth/domain/models/user_model.dart';
 import 'package:marlink_app/features/auth/providers/auth_provider.dart';
 import 'package:marlink_app/features/chat/presentation/call_screen.dart';
@@ -813,21 +814,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
           Navigator.pop(context);
           final currentRoom = ref.read(roomsNotifierProvider).currentRoom;
           if (currentRoom != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('Starting voice call with ${member.displayName}...'),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-              ),
+            MarLinkToast.show(
+              context,
+              message: 'Starting voice call with ${member.displayName}...',
+              type: MarLinkToastType.loading,
+              duration: const Duration(seconds: 2),
             );
             final call = await ref.read(callNotifierProvider.notifier).startCall(
               currentRoom.id,
@@ -835,19 +826,13 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
               targetUserId: member.userId,
             );
             if (mounted) {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
               if (call != null) {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => CallScreen(call: call)),
                 );
               } else {
                 final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect call.';
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(err),
-                    backgroundColor: AppColors.alertEmergency,
-                  ),
-                );
+                MarLinkToast.showError(context, err);
               }
             }
           }
@@ -856,21 +841,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
           Navigator.pop(context);
           final currentRoom = ref.read(roomsNotifierProvider).currentRoom;
           if (currentRoom != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('Starting video call with ${member.displayName}...'),
-                  ],
-                ),
-                duration: const Duration(seconds: 2),
-              ),
+            MarLinkToast.show(
+              context,
+              message: 'Starting video call with ${member.displayName}...',
+              type: MarLinkToastType.loading,
+              duration: const Duration(seconds: 2),
             );
             final call = await ref.read(callNotifierProvider.notifier).startCall(
               currentRoom.id,
@@ -878,19 +853,13 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
               targetUserId: member.userId,
             );
             if (mounted) {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
               if (call != null) {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => CallScreen(call: call)),
                 );
               } else {
                 final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect video call.';
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(err),
-                    backgroundColor: AppColors.alertEmergency,
-                  ),
-                );
+                MarLinkToast.showError(context, err);
               }
             }
           }
@@ -1302,12 +1271,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                     onPressed: () {
                       ref.read(mapNotifierProvider.notifier).resetSpeedStats();
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Trip speed statistics reset.'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
+                      MarLinkToast.showSuccess(context, 'Trip speed statistics reset.');
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 16, color: AppColors.brandSky),
                     label: const Text('Reset', style: TextStyle(color: AppColors.brandSky, fontSize: 12)),
@@ -1814,13 +1778,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
                   await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on');
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🟢 Live location sharing is ON'),
-                        backgroundColor: AppColors.statusOnline,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    MarLinkToast.showSuccess(context, '🟢 Live location sharing is ON');
                   }
                 },
               ),
@@ -1834,13 +1792,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
                   await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'on');
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('⏳ Live location sharing set for 1 hour'),
-                        backgroundColor: AppColors.brandBlue,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    MarLinkToast.showInfo(context, '⏳ Live location sharing set for 1 hour');
                   }
                 },
               ),
@@ -1853,13 +1805,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
                   await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'paused');
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🟡 Live location sharing is PAUSED'),
-                        backgroundColor: AppColors.alertWarning,
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    MarLinkToast.showWarning(context, '🟡 Live location sharing is PAUSED');
                   }
                 },
               ),
@@ -1872,13 +1818,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                   ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
                   await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'off');
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🔴 Location sharing is OFF. Group members cannot see your location.'),
-                        backgroundColor: AppColors.alertEmergency,
-                        duration: Duration(seconds: 3),
-                      ),
-                    );
+                    MarLinkToast.showError(context, '🔴 Location sharing is OFF. Group members cannot see your location.');
                   }
                 },
               ),
@@ -2294,14 +2234,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       ref.read(mapNotifierProvider.notifier).setBroadcasting(false);
       await ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'off');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔴 Location sharing turned OFF (Hidden from Map)'),
-            backgroundColor: AppColors.alertEmergency,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        MarLinkToast.showError(context, '🔴 Location sharing turned OFF (Hidden from Map)');
       }
     } else {
       ref.read(mapNotifierProvider.notifier).setBroadcasting(true);
@@ -2311,14 +2244,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
         _mapController.move(LatLng(pos.latitude, pos.longitude), 16.5);
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🟢 Live location sharing is ON & broadcasting'),
-            backgroundColor: AppColors.statusOnline,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        MarLinkToast.showSuccess(context, '🟢 Live location sharing is ON & broadcasting');
       }
     }
   }

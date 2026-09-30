@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/widgets/marlink_button.dart';
 import 'package:marlink_app/core/widgets/marlink_text_field.dart';
+import 'package:marlink_app/core/widgets/marlink_toast.dart';
 import 'package:marlink_app/features/map/providers/location_provider.dart';
 import 'package:marlink_app/features/rooms/domain/models/room_member_model.dart';
 import 'package:marlink_app/features/rooms/providers/room_provider.dart';
@@ -64,9 +65,7 @@ class _AttentionAlertModalState extends ConsumerState<AttentionAlertModal> {
       setState(() => _isSubmitting = false);
       if (success) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Attention alert dispatched!')),
-        );
+        MarLinkToast.showSuccess(context, 'Attention alert dispatched!');
       } else {
         setState(() {
           _error = ref.read(alertNotifierProvider).errorMessage ?? 'Unable to send alert.';

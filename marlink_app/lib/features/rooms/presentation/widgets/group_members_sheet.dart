@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/marlink_avatar.dart';
+import '../../../../core/widgets/marlink_toast.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../../../chat/presentation/call_screen.dart';
 import '../../../chat/providers/call_provider.dart';
@@ -118,24 +119,10 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
 
     if (confirm != true || !mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
-
-    // Show in-progress message
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Text('Removing ${member.displayName}...'),
-          ],
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    MarLinkToast.show(
+      context,
+      message: 'Removing ${member.displayName}...',
+      type: MarLinkToastType.loading,
     );
 
     final success = await ref
@@ -143,23 +130,12 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
         .removeMember(room.id, member.userId);
 
     if (!mounted) return;
-    messenger.hideCurrentSnackBar();
 
     if (success) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('${member.displayName} has been kicked from the group.'),
-          backgroundColor: AppColors.statusOnline,
-        ),
-      );
+      MarLinkToast.showSuccess(context, '${member.displayName} has been removed from the group.');
       _loadMembers();
     } else {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to kick member. Please try again.'),
-          backgroundColor: AppColors.alertEmergency,
-        ),
-      );
+      MarLinkToast.showError(context, 'Failed to remove member. Please try again.');
     }
   }
 
@@ -196,7 +172,6 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
 
     if (confirm != true || !mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
 
     final success = await ref.read(roomsNotifierProvider.notifier).leaveRoom(room.id);
@@ -204,42 +179,20 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
 
     if (success) {
       nav.pop(); // Close bottom sheet
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('You have left "${room.name}".'),
-          backgroundColor: AppColors.statusOnline,
-        ),
-      );
+      MarLinkToast.showSuccess(context, 'You have left "${room.name}".');
     } else {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Failed to leave group. Please check your connection.'),
-          backgroundColor: AppColors.alertEmergency,
-        ),
-      );
+      MarLinkToast.showError(context, 'Failed to leave group. Please check your connection.');
     }
   }
 
   Future<void> _startDirectCall(int targetUserId, {required bool isVideo}) async {
     final room = _detailedRoom ?? widget.room;
-    final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
 
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            Text(isVideo ? 'Starting direct video call...' : 'Starting direct voice call...'),
-          ],
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+    MarLinkToast.show(
+      context,
+      message: isVideo ? 'Starting direct video call...' : 'Starting direct voice call...',
+      type: MarLinkToastType.loading,
     );
 
     final call = await ref.read(callNotifierProvider.notifier).startCall(
@@ -249,7 +202,6 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
         );
 
     if (!mounted) return;
-    messenger.hideCurrentSnackBar();
 
     if (call != null) {
       nav.push(
@@ -257,12 +209,7 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
       );
     } else {
       final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect call.';
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(err),
-          backgroundColor: AppColors.alertEmergency,
-        ),
-      );
+      MarLinkToast.showError(context, err);
     }
   }
 
@@ -328,9 +275,7 @@ class _GroupMembersSheetState extends ConsumerState<GroupMembersSheet> {
                             InkWell(
                               onTap: () {
                                 Clipboard.setData(ClipboardData(text: room.code));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Code ${room.code} copied!')),
-                                );
+                                MarLinkToast.showInfo(context, 'Group code ${room.code} copied!');
                               },
                               borderRadius: BorderRadius.circular(6),
                               child: Container(

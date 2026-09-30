@@ -64,10 +64,12 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               behavior: SnackBarBehavior.floating,
-              backgroundColor: const Color(0xFF0F1B35),
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+              backgroundColor: const Color(0xFF0F1E38).withValues(alpha: 0.98),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: AppColors.brandSky.withValues(alpha: 0.3)),
+                side: BorderSide(color: AppColors.brandSky.withValues(alpha: 0.4), width: 1.2),
               ),
               content: Row(
                 children: [

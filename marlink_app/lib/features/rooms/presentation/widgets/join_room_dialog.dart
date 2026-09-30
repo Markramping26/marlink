@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/marlink_button.dart';
 import '../../../../../core/widgets/marlink_text_field.dart';
+import '../../../../../core/widgets/marlink_toast.dart';
 import '../../providers/room_provider.dart';
 
 class JoinRoomDialog extends ConsumerStatefulWidget {
@@ -42,19 +42,7 @@ class _JoinRoomDialogState extends ConsumerState<JoinRoomDialog> {
       setState(() => _isSubmitting = false);
       if (success) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: AppColors.statusOnline, size: 18),
-                SizedBox(width: 8),
-                Text('Joined group successfully!'),
-              ],
-            ),
-            backgroundColor: AppColors.darkSurface,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        MarLinkToast.showSuccess(context, 'Joined group successfully!');
       } else {
         setState(() {
           _error = ref.read(roomsNotifierProvider).errorMessage ?? 'Unable to join group.';

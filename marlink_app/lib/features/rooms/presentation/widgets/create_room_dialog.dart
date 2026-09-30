@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/marlink_button.dart';
 import '../../../../../core/widgets/marlink_text_field.dart';
+import '../../../../../core/widgets/marlink_toast.dart';
 import '../../providers/room_provider.dart';
 
 class CreateRoomDialog extends ConsumerStatefulWidget {
@@ -42,19 +42,7 @@ class _CreateRoomDialogState extends ConsumerState<CreateRoomDialog> {
       setState(() => _isSubmitting = false);
       if (success) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.statusOnline, size: 18),
-                const SizedBox(width: 8),
-                Text('Created "${_nameController.text.trim()}" successfully!'),
-              ],
-            ),
-            backgroundColor: AppColors.darkSurface,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        MarLinkToast.showSuccess(context, 'Created "${_nameController.text.trim()}" successfully!');
       } else {
         setState(() {
           _error = ref.read(roomsNotifierProvider).errorMessage ?? 'Unable to create group.';

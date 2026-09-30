@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/widgets/marlink_avatar.dart';
+import 'package:marlink_app/core/widgets/marlink_toast.dart';
 import 'package:marlink_app/core/widgets/status_badge.dart';
 import 'package:marlink_app/core/config/app_config.dart';
 import 'package:marlink_app/features/auth/presentation/login_screen.dart';
@@ -50,11 +51,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (info != null && info.isUpdateAvailable) {
             _showUpdateDialog(info);
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('You are using the latest version of MarLink! (v${AppConfig.appVersion})'),
-                backgroundColor: AppColors.statusOnline,
-              ),
+            MarLinkToast.showSuccess(
+              context,
+              'You are using the latest version of MarLink! (v${AppConfig.appVersion})',
             );
           }
         }
@@ -66,11 +65,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _hasCheckedUpdate = true;
         });
         if (!silent) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cannot check for updates. Please verify your internet connection.'),
-              backgroundColor: AppColors.alertEmergency,
-            ),
+          MarLinkToast.showError(
+            context,
+            'Cannot check for updates. Please verify your internet connection.',
           );
         }
       }
@@ -78,12 +75,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _startUpdateDownload(AppUpdateInfo info) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Starting download of MarLink update...'),
-        backgroundColor: AppColors.brandBlue,
-      ),
-    );
+    MarLinkToast.showInfo(context, 'Starting download of MarLink update...');
     final success = await AppUpdateService.launchDownload(info.downloadUrl);
     if (!success && mounted) {
       await AppUpdateService.launchDownload(info.fallbackUrl);
@@ -162,20 +154,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final success = await ref.read(authNotifierProvider.notifier).uploadAvatar(File(picked.path));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              success ? 'Profile photo updated successfully!' : 'Failed to upload photo. Please try again.',
-            ),
-            backgroundColor: success ? AppColors.statusOnline : AppColors.alertEmergency,
-          ),
-        );
+        if (success) {
+          MarLinkToast.showSuccess(context, 'Profile photo updated successfully!');
+        } else {
+          MarLinkToast.showError(context, 'Failed to upload photo. Please try again.');
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.alertEmergency),
-        );
+        MarLinkToast.showError(context, 'Error: $e');
       }
     } finally {
       if (mounted) {
@@ -251,12 +238,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       builder: (ctx) => _ChangePasswordModal(
         onPasswordChanged: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password updated successfully!'),
-              backgroundColor: AppColors.statusOnline,
-            ),
-          );
+          MarLinkToast.showSuccess(context, 'Password updated successfully!');
         },
       ),
     );
@@ -573,9 +555,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 if (confirm == true) {
                   await ref.read(locationRepositoryProvider).clearHistory();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Location history cleared successfully.')),
-                    );
+                    MarLinkToast.showSuccess(context, 'Location history cleared successfully.');
                   }
                 }
               },

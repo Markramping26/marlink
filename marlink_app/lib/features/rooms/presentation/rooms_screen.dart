@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/empty_state_view.dart';
 import '../../../../core/widgets/loading_view.dart';
+import '../../../../core/widgets/marlink_toast.dart';
 import '../domain/models/room_model.dart';
 import '../providers/room_provider.dart';
 import 'widgets/create_room_dialog.dart';
@@ -252,19 +253,7 @@ class RoomsScreen extends ConsumerWidget {
       onTap: () {
         ref.read(roomsNotifierProvider.notifier).selectRoom(room);
         HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.statusOnline, size: 18),
-                const SizedBox(width: 8),
-                Text('Switched active group to "${room.name}"'),
-              ],
-            ),
-            duration: const Duration(seconds: 2),
-            backgroundColor: AppColors.darkSurface,
-          ),
-        );
+        MarLinkToast.showSuccess(context, 'Switched active group to "${room.name}"');
       },
       borderRadius: BorderRadius.circular(18),
       child: Container(
@@ -409,19 +398,7 @@ class RoomsScreen extends ConsumerWidget {
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: room.code));
                     HapticFeedback.lightImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(Icons.copy, color: AppColors.brandSky, size: 16),
-                            const SizedBox(width: 8),
-                            Text('Group code ${room.code} copied!'),
-                          ],
-                        ),
-                        backgroundColor: AppColors.darkSurface,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
+                    MarLinkToast.showInfo(context, 'Group code ${room.code} copied!');
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -534,9 +511,7 @@ class RoomsScreen extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(ctx);
                     Clipboard.setData(ClipboardData(text: room.code));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Group code ${room.code} copied!')),
-                    );
+                    MarLinkToast.showInfo(context, 'Group code ${room.code} copied!');
                   },
                 ),
                 ListTile(
@@ -574,33 +549,18 @@ class RoomsScreen extends ConsumerWidget {
                       ),
                     );
                     if (confirm == true && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              ),
-                              const SizedBox(width: 12),
-                              Text('Leaving "${room.name}"...'),
-                            ],
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
+                      MarLinkToast.show(
+                        context,
+                        message: 'Leaving "${room.name}"...',
+                        type: MarLinkToastType.loading,
                       );
                       final success = await ref.read(roomsNotifierProvider.notifier).leaveRoom(room.id);
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(success
-                                ? 'You have left "${room.name}".'
-                                : 'Failed to leave group. Please try again.'),
-                            backgroundColor: success ? AppColors.statusOnline : AppColors.alertEmergency,
-                          ),
-                        );
+                        if (success) {
+                          MarLinkToast.showSuccess(context, 'You have left "${room.name}".');
+                        } else {
+                          MarLinkToast.showError(context, 'Failed to leave group. Please try again.');
+                        }
                       }
                     }
                   },

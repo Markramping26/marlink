@@ -3,6 +3,7 @@ import '../../../../core/config/app_config.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/marlink_toast.dart';
 
 class ServerConfigDialog extends StatefulWidget {
   final VoidCallback? onConfigSaved;
@@ -86,19 +87,7 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
     if (mounted) {
       Navigator.of(context).pop();
       widget.onConfigSaved?.call();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: AppColors.statusOnline, size: 18),
-              const SizedBox(width: 8),
-              Text('Server set to ${AppConfig.serverAddress}'),
-            ],
-          ),
-          backgroundColor: AppColors.darkSurface,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      MarLinkToast.showSuccess(context, 'Server set to ${AppConfig.serverAddress}');
     }
   }
 

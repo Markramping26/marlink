@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:marlink_app/core/theme/app_colors.dart';
 import 'package:marlink_app/core/widgets/empty_state_view.dart';
 import 'package:marlink_app/core/widgets/loading_view.dart';
+import 'package:marlink_app/core/widgets/marlink_toast.dart';
 import 'package:marlink_app/features/auth/providers/auth_provider.dart';
 import 'package:marlink_app/features/map/providers/location_provider.dart';
 import 'package:marlink_app/features/rooms/presentation/widgets/group_members_sheet.dart';
@@ -108,37 +109,21 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                               'My Current Location',
                             );
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('📍 Location pin sent to chat.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          MarLinkToast.showSuccess(context, '📍 Location pin sent to chat.');
                         }
                         return;
                       }
 
                       // Fallback: acquire fresh coordinates
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Row(
-                            children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              ),
-                              SizedBox(width: 12),
-                              Text('Acquiring high-accuracy GPS position...'),
-                            ],
-                          ),
-                          duration: Duration(seconds: 3),
-                        ),
+                      MarLinkToast.show(
+                        context,
+                        message: 'Acquiring high-accuracy GPS position...',
+                        type: MarLinkToastType.loading,
+                        duration: const Duration(seconds: 3),
                       );
 
                       final pos = await ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: true);
                       if (pos != null && context.mounted) {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ref.read(chatNotifierProvider.notifier).sendLocationMessage(
                               pos.latitude,
                               pos.longitude,
@@ -168,9 +153,7 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                       ref.read(chatNotifierProvider.notifier).sendTextMessage("🟢 Started sharing live location with room.");
                       ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: false);
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Live location sharing is now ACTIVE.')),
-                        );
+                        MarLinkToast.showSuccess(context, 'Live location sharing is now ACTIVE.');
                       }
                     },
                   ),
@@ -194,9 +177,7 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                       ref.read(chatNotifierProvider.notifier).sendTextMessage("⏱️ Started sharing live location for 1 hour.");
                       ref.read(mapNotifierProvider.notifier).captureCurrentPosition(openSettingsIfDisabled: false);
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sharing live location for the next 1 hour.')),
-                        );
+                        MarLinkToast.showInfo(context, 'Sharing live location for the next 1 hour.');
                       }
                     },
                   ),
@@ -220,9 +201,7 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                       ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'paused');
                       ref.read(chatNotifierProvider.notifier).sendTextMessage("⏸️ Paused live location sharing.");
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Location sharing is now PAUSED.')),
-                        );
+                        MarLinkToast.showWarning(context, 'Location sharing is now PAUSED.');
                       }
                     },
                   ),
@@ -246,9 +225,7 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                       ref.read(authNotifierProvider.notifier).updateLocationSharing(status: 'off');
                       ref.read(chatNotifierProvider.notifier).sendTextMessage("🔴 Stopped sharing live location.");
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Location broadcasting is turned OFF.')),
-                        );
+                        MarLinkToast.showError(context, 'Location broadcasting is turned OFF.');
                       }
                     },
                   ),
@@ -346,39 +323,23 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
             onPressed: currentRoom == null
                 ? null
                 : () async {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Row(
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Starting group voice call...'),
-                          ],
-                        ),
-                        duration: Duration(seconds: 2),
-                      ),
+                    MarLinkToast.show(
+                      context,
+                      message: 'Starting group voice call...',
+                      type: MarLinkToastType.loading,
+                      duration: const Duration(seconds: 2),
                     );
                     final call = await ref
                         .read(callNotifierProvider.notifier)
                         .startCall(currentRoom.id, isVideo: false);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       if (call != null) {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => CallScreen(call: call)),
                         );
                       } else {
                         final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect call. Please check your connection.';
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(err),
-                            backgroundColor: AppColors.alertEmergency,
-                          ),
-                        );
+                        MarLinkToast.showError(context, err);
                       }
                     }
                   },
@@ -391,39 +352,23 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
             onPressed: currentRoom == null
                 ? null
                 : () async {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Row(
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Starting group video call...'),
-                          ],
-                        ),
-                        duration: Duration(seconds: 2),
-                      ),
+                    MarLinkToast.show(
+                      context,
+                      message: 'Starting group video call...',
+                      type: MarLinkToastType.loading,
+                      duration: const Duration(seconds: 2),
                     );
                     final call = await ref
                         .read(callNotifierProvider.notifier)
                         .startCall(currentRoom.id, isVideo: true);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       if (call != null) {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => CallScreen(call: call)),
                         );
                       } else {
                         final err = ref.read(callNotifierProvider).errorMessage ?? 'Unable to connect video call. Please check your connection.';
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(err),
-                            backgroundColor: AppColors.alertEmergency,
-                          ),
-                        );
+                        MarLinkToast.showError(context, err);
                       }
                     }
                   },
@@ -452,9 +397,7 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                 GroupMembersSheet.show(context, currentRoom);
               } else if (val == 'copy_code') {
                 Clipboard.setData(ClipboardData(text: currentRoom.code));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Group code ${currentRoom.code} copied!')),
-                );
+                MarLinkToast.showSuccess(context, 'Group code ${currentRoom.code} copied!');
               } else if (val == 'leave') {
                 final confirm = await showDialog<bool>(
                   context: context,
@@ -485,33 +428,19 @@ class _RoomChatScreenState extends ConsumerState<RoomChatScreen> {
                   ),
                 );
                 if (confirm == true && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          ),
-                          const SizedBox(width: 12),
-                          Text('Leaving "${currentRoom.name}"...'),
-                        ],
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
+                  MarLinkToast.show(
+                    context,
+                    message: 'Leaving "${currentRoom.name}"...',
+                    type: MarLinkToastType.loading,
+                    duration: const Duration(seconds: 2),
                   );
                   final success = await ref.read(roomsNotifierProvider.notifier).leaveRoom(currentRoom.id);
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success
-                            ? 'You have left "${currentRoom.name}".'
-                            : 'Failed to leave group. Please try again.'),
-                        backgroundColor: success ? AppColors.statusOnline : AppColors.alertEmergency,
-                      ),
-                    );
+                    if (success) {
+                      MarLinkToast.showSuccess(context, 'You have left "${currentRoom.name}".');
+                    } else {
+                      MarLinkToast.showError(context, 'Failed to leave group. Please try again.');
+                    }
                   }
                 }
               }
